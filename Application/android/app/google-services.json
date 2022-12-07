@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "848853137262",
+    "project_id": "moontv-e7daa",
+    "storage_bucket": "moontv-e7daa.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:848853137262:android:0549b0f7b615e3f800337f",
+        "android_client_info": {
+          "package_name": "com.moon.moon_tv"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "848853137262-tqkt14us7sn1tuv1cv53t7ft92vqnth9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuyFCQSjLThH0DxKQwYridzyZiBRwCUb8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "848853137262-tqkt14us7sn1tuv1cv53t7ft92vqnth9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:848853137262:android:9b0cb7694e9c8f4f00337f",
+        "android_client_info": {
+          "package_name": "com.moontv.application"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "848853137262-tqkt14us7sn1tuv1cv53t7ft92vqnth9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuyFCQSjLThH0DxKQwYridzyZiBRwCUb8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "848853137262-tqkt14us7sn1tuv1cv53t7ft92vqnth9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
