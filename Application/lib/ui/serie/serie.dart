@@ -1243,8 +1243,8 @@ class _SerieState extends State<Serie> {
                                             padding: const EdgeInsets.symmetric(
                                                 vertical: 5.0),
                                             child: AnimatedContainer(
-                                              onEnd: (){
-                                                if(postx == index &&
+                                              onEnd: () {
+                                                if (postx == index &&
                                                     posty == 2)
                                                   AudioUtil().playTickSound();
                                               },
@@ -1660,14 +1660,13 @@ class _SerieState extends State<Serie> {
   }
 
   void _goToTrailer() async {
-    if (posty == 0 && postx == 1) {
-      String url = widget.serie.trailer.url;
-      if (await canLaunch(url)) {
-        await launch(url);
-      } else {
-        throw 'Could not launch $url';
-      }
-    }
+    if (posty == 0 && postx == 1)
+      Player.playTrailer(
+        context,
+        widget.serie.trailer.url,
+        widget.serie.title,
+        widget.serie.description,
+      );
   }
 
   void _selectSeason() {
@@ -1700,7 +1699,8 @@ class _SerieState extends State<Serie> {
         }
       }
 
-      Player.openPlayer(context,
+      Player.openPlayer(
+          context,
           _sources[_new_selected_source].id,
           _sources[_new_selected_source].url,
           widget.serie.title,

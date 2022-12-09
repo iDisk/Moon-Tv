@@ -1197,12 +1197,8 @@ class _MovieState extends State<Movie> {
 
   void _goToTrailer() async {
     if (posty == 0 && postx == 1) {
-      String url = widget.movie.trailer.url;
-      if (await canLaunch(url)) {
-        await launch(url);
-      } else {
-        throw 'Could not launch $url';
-      }
+      Player.playTrailer(context, widget.movie.trailer.url, widget.movie.title,
+          widget.movie.description);
     }
   }
 

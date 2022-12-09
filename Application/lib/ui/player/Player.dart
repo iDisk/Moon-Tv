@@ -10,6 +10,7 @@ import 'dart:convert' as convert;
 import 'package:flutter_app_tv/model/subtitle.dart' as model;
 import 'package:image_fade/image_fade.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../key_code.dart';
 import '../../model/subtitle.dart';
@@ -17,24 +18,38 @@ import '../../model/subtitle.dart';
 class Player {
   static final platform = MethodChannel('VIDEO_PLAYER_CHANNEL');
 
+  static playTrailer(BuildContext context, String url, String title,
+      String description) async {
+    print("trailer played Url == $url");
+    RegExp reg = RegExp(
+        r'http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?');
+
+    if (reg.hasMatch(url)) {
+      if (await canLaunch(url)) {
+        await launch(url);
+      } else {
+        throw 'Could not launch $url';
+      }
+    } else {
+      Player.openPlayer(context, 0, url, title, description, false, false,
+          isTrailer: true);
+    }
+  }
+
   static openPlayer(BuildContext context, int id, String url, String title,
-      String description, bool liveTV, bool isMovie) async {
+      String description, bool liveTV, bool isMovie,
+      {bool isTrailer = false}) async {
+    if (isTrailer) {
+      launchPlayer([], 0, url, title, description, liveTV, isMovie, false,
+          isTrailer: true);
+      return;
+    }
     var result =
         await platform.invokeMethod("getVideoLastTime", {'id': id}) as int;
 
-    print("Time = $result");
-    print("Time = ${DateTime(result)}");
-    var seconds = (result / 1000) % 60;
-    var minutes = ((result / (1000 * 60)) % 60);
-    var hours = ((result / (1000 * 60 * 60)) % 24);
-    var formatter = intl.NumberFormat("##");
-
     var date = DateTime(2000);
-
     var format = intl.DateFormat("HH:mm:ss");
-
     var time = format.format(date.add(Duration(milliseconds: result)));
-    // "${formatter.format(hours).toString().padLeft(2, '0')}:${formatter.format(minutes).toString().padLeft(2, '0')}:${formatter.format(seconds).toString().padLeft(2, '0')}";
 
     showProgress(context);
     var subTitleList = await getSubtitlesList(id, isMovie);
@@ -199,7 +214,8 @@ class Player {
       String description,
       bool liveTV,
       bool isMovie,
-      bool resume) async {
+      bool resume,
+      {bool isTrailer = false}) async {
     print("here ==> ${convertToJson(subTitleList)}");
     var result = await platform.invokeMethod('launchVideoPlayer', {
       'id': id,
@@ -207,7 +223,7 @@ class Player {
       'title': title,
       'description': description,
       'resume': resume,
-
+      'isTrailer': isTrailer,
       // 'subTitle': subTitleList.length > 0 ? subTitleList?.first?.url : ""
       'subTitle': convertToJson(subTitleList)
     });
@@ -309,7 +325,7 @@ class _ResumeDiaLogState extends State<ResumeDiaLog> {
                   height: 10,
                 ),
                 Text("Reanudar Donde Se Quedo?",
-                // Text("Desea reanudar la transmision a ${widget.time} mins?",
+                    // Text("Desea reanudar la transmision a ${widget.time} mins?",
                     style: TextStyle(color: Colors.white, fontSize: 20)),
                 SizedBox(
                   height: 30,
@@ -326,15 +342,15 @@ class _ResumeDiaLogState extends State<ResumeDiaLog> {
                         },
                         child: Text("Si"),
                         style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(0.0)),
-                              side: BorderSide(
-                                  color: pos_y == 0
-                                      ? Colors.grey
-                                      : Colors.transparent,width: 2)),
-                          backgroundColor:Colors.black
-                        ),
+                            shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(0.0)),
+                                side: BorderSide(
+                                    color: pos_y == 0
+                                        ? Colors.grey
+                                        : Colors.transparent,
+                                    width: 2)),
+                            backgroundColor: Colors.black),
                       ),
                     ),
                     SizedBox(
@@ -351,12 +367,14 @@ class _ResumeDiaLogState extends State<ResumeDiaLog> {
                         style: ElevatedButton.styleFrom(
                             shape: RoundedRectangleBorder(
                                 borderRadius:
-                                BorderRadius.all(Radius.circular(0.0)),
+                                    BorderRadius.all(Radius.circular(0.0)),
                                 side: BorderSide(
-                                    color: pos_y == 1
-                                        ? Colors.grey
-                                        : Colors.transparent,width: 2,)),
-                            backgroundColor:Colors.red),
+                                  color: pos_y == 1
+                                      ? Colors.grey
+                                      : Colors.transparent,
+                                  width: 2,
+                                )),
+                            backgroundColor: Colors.red),
                       ),
                     )
                   ],
