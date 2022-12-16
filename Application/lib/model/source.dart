@@ -1,5 +1,5 @@
-class Source{
-   int id;
+class Source {
+  int id;
   String type;
   String title;
   String quality;
@@ -9,21 +9,40 @@ class Source{
   bool external;
   String url;
 
-  Source({this.id, this.type, this.title, this.quality, this.size, this.kind,
-      this.premium, this.external, this.url});
+  Source(
+      {this.id,
+      this.type,
+      this.title,
+      this.quality,
+      this.size,
+      this.kind,
+      this.premium,
+      this.external,
+      this.url});
 
-   factory Source.fromJson(Map<String, dynamic> parsedJson){
-     return Source(
-          id: parsedJson['id'],
-          title : parsedJson['title'],
-          type : parsedJson['type'],
-          quality : parsedJson['quality'],
-          size : parsedJson['size'],
-          premium : parsedJson['premium'],
-          external : parsedJson['external'],
-          url : parsedJson['url']
-     );
-   }
+  factory Source.fromJson(Map<String, dynamic> parsedJson) {
+    return Source(
+        id: parsedJson['id'],
+        title: parsedJson['title'],
+        type: parsedJson['type'],
+        quality: parsedJson['quality'],
+        size: parsedJson['size'],
+        premium: parsedJson['premium'],
+        external: parsedJson['external'],
+        url: parsedJson['url']);
+  }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'type': type,
+      'title': title,
+      'quality': quality,
+      'size': size,
+      'kind': kind,
+      'premium': premium,
+      'external': external,
+      'url': url,
+    };
+  }
 }
-

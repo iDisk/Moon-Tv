@@ -7,6 +7,10 @@ import android.os.PersistableBundle
 import android.util.Log
 import androidx.annotation.NonNull
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.moontv.application.ext.convertToListObject
+import com.moontv.application.model.Season
+import com.moontv.application.model.SeasonItem
+import com.moontv.application.utils.PrefUtils
 import com.smsolutions.tv.ui.PlaybackActivity
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -17,16 +21,18 @@ import org.json.JSONObject
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "VIDEO_PLAYER_CHANNEL"
-
+    lateinit var prefUtils: PrefUtils
     override fun onCreate(savedInstanceState: Bundle?, persistentState: PersistableBundle?) {
         super.onCreate(savedInstanceState, persistentState)
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
+        prefUtils = PrefUtils.with(context)
 
     }
 
     private var playerLaunchedTimeStamp = 0L
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        prefUtils = PrefUtils.with(context)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
             // This method is invoked on the main thread.
                 call, result ->
@@ -53,6 +59,30 @@ class MainActivity : FlutterActivity() {
             } else if (call.method == "getVideoLastTime") {
                 Log.d("TAG", "configureFlutterEngine: ${call.argument<Int>("id")}")
                 result.success(getCurrentTime(call.argument<Int>("id") ?: 0))
+            } else if (call.method == "getLastPlayedEpisodeDetail") {
+                result.success(prefUtils.getLastPlayedEpisode(call.argument<Int>("id") ?: -1))
+            } else if (call.method == "playEpisodes" && playerLaunchedTimeStamp < System.currentTimeMillis()) {
+                playerLaunchedTimeStamp = (System.currentTimeMillis() + 500)
+
+                val intent = Intent(this@MainActivity, PlaybackActivity::class.java)
+                val id = call.argument<Int>("id")
+                val mainId = call.argument<Int>("mainId")
+                val subTitle = call.argument<String>("subTitle")
+                val title = call.argument<String>("title")
+                val resume = call.argument<Boolean>("resume")
+                val description = call.argument<String>("description")
+                val seasons = call.argument<String>("seasons")
+
+                intent.putExtra("title", "$title")
+                intent.putExtra("id", id)
+                intent.putExtra("mainId", mainId)
+                intent.putExtra("subTitle", "$subTitle")
+                intent.putExtra("resume", resume)
+                intent.putExtra("description", "$description")
+                intent.putExtra("isSeries", true)
+                intent.putExtra("seasons", seasons)
+                startActivity(intent)
+                result.success(true)
             }
         }
     }

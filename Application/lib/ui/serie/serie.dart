@@ -61,8 +61,8 @@ class Serie extends StatefulWidget {
   _SerieState createState() => _SerieState();
 }
 
-class _SerieState extends State<Serie> {
-  int postx = 0;
+class _SerieState extends State<Serie> with WidgetsBindingObserver {
+  int postx = 1;
   int posty = 0;
   int selected_season = 0;
   int selected_episode;
@@ -87,18 +87,27 @@ class _SerieState extends State<Serie> {
   List<Poster> series = [];
   List<Season> seasons = [];
   List<Source> sources = [];
+  var seasonResponse = "";
 
   bool logged = false;
   bool added = false;
 
+  var resumableText = "";
   bool my_list_loading = false;
 
   String subscribed = "FALSE";
+
+  int seasonIndex = 0;
+
+  int episodeIndex = 0;
+
+  int sourceIndex = 0;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Future.delayed(Duration.zero, () {
       FocusScope.of(context).requestFocus(movie_focus_node);
       _getRelatedList();
@@ -106,6 +115,19 @@ class _SerieState extends State<Serie> {
       _getSeasons();
       _checkLogged();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      getResumableText();
+    }
   }
 
   void _checkLogged() async {
@@ -150,7 +172,7 @@ class _SerieState extends State<Serie> {
   }
 
   void _addMylist() async {
-    if (posty == 0 && postx == 2) {
+    if (posty == 0 && postx == 3) {
       if (logged == true) {
         setState(() {
           my_list_loading = true;
@@ -222,6 +244,7 @@ class _SerieState extends State<Serie> {
     });
     var response = await apiRest.getSeasonsBySerie(widget.serie.id);
     if (response != null) {
+      seasonResponse = response.body;
       if (response.statusCode == 200) {
         var jsonData = convert.jsonDecode(response.body);
         for (Map i in jsonData) {
@@ -230,7 +253,10 @@ class _SerieState extends State<Serie> {
         }
       }
     }
+    await getResumableText();
+
     setState(() {
+      postx = resumableText.isNotEmpty ? 0 : 1;
       _visibile_season_loading = false;
     });
   }
@@ -284,6 +310,7 @@ class _SerieState extends State<Serie> {
                   rawKeyDownEvent.data;
               switch (rawKeyEventDataAndroid.keyCode) {
                 case KEY_CENTER:
+                  _resumeSeason();
                   _openSource();
                   _selectSeason();
                   _goToPlayer();
@@ -598,6 +625,84 @@ class _SerieState extends State<Serie> {
                                             children: [
                                               Row(
                                                 children: [
+                                                  resumableText.isNotEmpty
+                                                      ? GestureDetector(
+                                                          onTap: () {
+                                                            setState(() {
+                                                              posty = 0;
+                                                              postx = 0;
+                                                              Future.delayed(
+                                                                  Duration(
+                                                                      milliseconds:
+                                                                          100),
+                                                                  () {
+                                                                _resumeSeason();
+                                                              });
+                                                            });
+                                                          },
+                                                          child: Container(
+                                                            height: 35,
+                                                            padding: EdgeInsets
+                                                                .symmetric(
+                                                                    horizontal:
+                                                                        5),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              border: Border.all(
+                                                                  color: Colors
+                                                                      .white,
+                                                                  width: 0.3),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          5),
+                                                              color: (postx ==
+                                                                          0 &&
+                                                                      posty ==
+                                                                          0)
+                                                                  ? Colors.white
+                                                                  : Colors
+                                                                      .white30,
+                                                            ),
+                                                            child: Row(
+                                                              children: [
+                                                                Container(
+                                                                  height: 35,
+                                                                  width: 35,
+                                                                  child: Icon(
+                                                                    FontAwesomeIcons
+                                                                        .retweet,
+                                                                    color: (postx ==
+                                                                                0 &&
+                                                                            posty ==
+                                                                                0)
+                                                                        ? Colors
+                                                                            .black
+                                                                        : Colors
+                                                                            .white,
+                                                                    size: 11,
+                                                                  ),
+                                                                ),
+                                                                Text(
+                                                                    resumableText,
+                                                                    style: TextStyle(
+                                                                        color: (postx == 0 && posty == 0)
+                                                                            ? Colors
+                                                                                .black
+                                                                            : Colors
+                                                                                .white,
+                                                                        fontSize:
+                                                                            11,
+                                                                        fontWeight:
+                                                                            FontWeight.w500)),
+                                                                SizedBox(
+                                                                    width: 5)
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        )
+                                                      : Container(),
+                                                  SizedBox(width: 5),
                                                   if (seasons.length > 0)
                                                     if (seasons[0]
                                                             .episodes
@@ -607,7 +712,7 @@ class _SerieState extends State<Serie> {
                                                         onTap: () {
                                                           setState(() {
                                                             posty = 0;
-                                                            postx = 0;
+                                                            postx = 1;
                                                             Future.delayed(
                                                                 Duration(
                                                                     milliseconds:
@@ -634,7 +739,7 @@ class _SerieState extends State<Serie> {
                                                                     .circular(
                                                                         5),
                                                             color: (postx ==
-                                                                        0 &&
+                                                                        1 &&
                                                                     posty == 0)
                                                                 ? Colors.white
                                                                 : Colors
@@ -649,7 +754,7 @@ class _SerieState extends State<Serie> {
                                                                   Icons
                                                                       .play_arrow,
                                                                   color: (postx ==
-                                                                              0 &&
+                                                                              1 &&
                                                                           posty ==
                                                                               0)
                                                                       ? Colors
@@ -670,7 +775,7 @@ class _SerieState extends State<Serie> {
                                                                               0]
                                                                           .title,
                                                                   style: TextStyle(
-                                                                      color: (postx == 0 &&
+                                                                      color: (postx == 1 &&
                                                                               posty ==
                                                                                   0)
                                                                           ? Colors
@@ -693,7 +798,7 @@ class _SerieState extends State<Serie> {
                                                     onTap: () {
                                                       setState(() {
                                                         posty = 0;
-                                                        postx = 1;
+                                                        postx = 2;
                                                         Future.delayed(
                                                             Duration(
                                                                 milliseconds:
@@ -714,7 +819,7 @@ class _SerieState extends State<Serie> {
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(5),
-                                                        color: (postx == 1 &&
+                                                        color: (postx == 2 &&
                                                                 posty == 0)
                                                             ? Colors.white
                                                             : Colors.white30,
@@ -728,7 +833,7 @@ class _SerieState extends State<Serie> {
                                                               FontAwesomeIcons
                                                                   .bullhorn,
                                                               color: (postx ==
-                                                                          1 &&
+                                                                          2 &&
                                                                       posty ==
                                                                           0)
                                                                   ? Colors.black
@@ -740,7 +845,7 @@ class _SerieState extends State<Serie> {
                                                           Text("Watch Trailer",
                                                               style: TextStyle(
                                                                   color: (postx ==
-                                                                              1 &&
+                                                                              2 &&
                                                                           posty ==
                                                                               0)
                                                                       ? Colors
@@ -763,7 +868,7 @@ class _SerieState extends State<Serie> {
                                                           visibileSourcesDialog);
                                                       setState(() {
                                                         posty = 0;
-                                                        postx = 2;
+                                                        postx = 3;
                                                         _addMylist();
                                                       });
                                                     },
@@ -779,7 +884,7 @@ class _SerieState extends State<Serie> {
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(3),
-                                                        color: (postx == 2 &&
+                                                        color: (postx == 3 &&
                                                                 posty == 0)
                                                             ? Colors.white
                                                             : Colors.white30,
@@ -813,7 +918,7 @@ class _SerieState extends State<Serie> {
                                                                         : FontAwesomeIcons
                                                                             .plusCircle,
                                                                     color: (postx ==
-                                                                                2 &&
+                                                                                3 &&
                                                                             posty ==
                                                                                 0)
                                                                         ? Colors
@@ -827,7 +932,7 @@ class _SerieState extends State<Serie> {
                                                               ? Text(
                                                                   "Loading ...",
                                                                   style: TextStyle(
-                                                                      color: (postx == 2 &&
+                                                                      color: (postx == 3 &&
                                                                               posty ==
                                                                                   0)
                                                                           ? Colors
@@ -845,7 +950,7 @@ class _SerieState extends State<Serie> {
                                                                       : "Add to My List",
                                                                   style: TextStyle(
                                                                       color: (postx ==
-                                                                                  2 &&
+                                                                                  3 &&
                                                                               posty ==
                                                                                   0)
                                                                           ? Colors
@@ -867,7 +972,7 @@ class _SerieState extends State<Serie> {
                                                     onTap: () {
                                                       setState(() {
                                                         posty = 0;
-                                                        postx = 3;
+                                                        postx = 4;
                                                         Future.delayed(
                                                             Duration(
                                                                 milliseconds:
@@ -888,7 +993,7 @@ class _SerieState extends State<Serie> {
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(5),
-                                                        color: (postx == 3 &&
+                                                        color: (postx == 4 &&
                                                                 posty == 0)
                                                             ? Colors.white
                                                             : Colors.white30,
@@ -902,7 +1007,7 @@ class _SerieState extends State<Serie> {
                                                               FontAwesomeIcons
                                                                   .starHalfAlt,
                                                               color: (postx ==
-                                                                          3 &&
+                                                                          4 &&
                                                                       posty ==
                                                                           0)
                                                                   ? Colors.black
@@ -914,7 +1019,7 @@ class _SerieState extends State<Serie> {
                                                           Text("Rate Serie",
                                                               style: TextStyle(
                                                                   color: (postx ==
-                                                                              3 &&
+                                                                              4 &&
                                                                           posty ==
                                                                               0)
                                                                       ? Colors
@@ -938,7 +1043,7 @@ class _SerieState extends State<Serie> {
                                                     onTap: () {
                                                       setState(() {
                                                         posty = 0;
-                                                        postx = 4;
+                                                        postx = 5;
                                                         Future.delayed(
                                                             Duration(
                                                                 milliseconds:
@@ -951,7 +1056,7 @@ class _SerieState extends State<Serie> {
                                                       duration: Duration(
                                                           milliseconds: 200),
                                                       height: 35,
-                                                      width: (postx == 4 &&
+                                                      width: (postx == 5 &&
                                                               posty == 0)
                                                           ? 98
                                                           : 35.6,
@@ -962,7 +1067,7 @@ class _SerieState extends State<Serie> {
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(5),
-                                                        color: (postx == 4 &&
+                                                        color: (postx == 5 &&
                                                                 posty == 0)
                                                             ? Colors.white
                                                             : Colors.white30,
@@ -976,7 +1081,7 @@ class _SerieState extends State<Serie> {
                                                               FontAwesomeIcons
                                                                   .comments,
                                                               color: (postx ==
-                                                                          4 &&
+                                                                          5 &&
                                                                       posty ==
                                                                           0)
                                                                   ? Colors.black
@@ -988,7 +1093,7 @@ class _SerieState extends State<Serie> {
                                                           Flexible(
                                                             child: Visibility(
                                                               visible: (postx ==
-                                                                      4 &&
+                                                                      5 &&
                                                                   posty == 0),
                                                               child: Text(
                                                                 "Comments",
@@ -1020,7 +1125,7 @@ class _SerieState extends State<Serie> {
                                                     onTap: () {
                                                       setState(() {
                                                         posty = 0;
-                                                        postx = 5;
+                                                        postx = 6;
                                                         Future.delayed(
                                                             Duration(
                                                                 milliseconds:
@@ -1033,7 +1138,7 @@ class _SerieState extends State<Serie> {
                                                       duration: Duration(
                                                           milliseconds: 200),
                                                       height: 35,
-                                                      width: (postx == 5 &&
+                                                      width: (postx == 6 &&
                                                               posty == 0)
                                                           ? 88
                                                           : 35.6,
@@ -1044,7 +1149,7 @@ class _SerieState extends State<Serie> {
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(5),
-                                                        color: (postx == 5 &&
+                                                        color: (postx == 6 &&
                                                                 posty == 0)
                                                             ? Colors.white
                                                             : Colors.white30,
@@ -1058,7 +1163,7 @@ class _SerieState extends State<Serie> {
                                                               FontAwesomeIcons
                                                                   .star,
                                                               color: (postx ==
-                                                                          5 &&
+                                                                          6 &&
                                                                       posty ==
                                                                           0)
                                                                   ? Colors.black
@@ -1070,14 +1175,14 @@ class _SerieState extends State<Serie> {
                                                           Flexible(
                                                             child: Visibility(
                                                               visible: (postx ==
-                                                                      5 &&
+                                                                      6 &&
                                                                   posty == 0),
                                                               child: Text(
                                                                 "Reviews",
                                                                 style:
                                                                     TextStyle(
                                                                   color: (postx ==
-                                                                              5 &&
+                                                                              6 &&
                                                                           posty ==
                                                                               0)
                                                                       ? Colors
@@ -1569,7 +1674,7 @@ class _SerieState extends State<Serie> {
   }
 
   void _goToReview() async {
-    if (posty == 0 && postx == 3) {
+    if (posty == 0 && postx == 4) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       bool logged = prefs.getBool("LOGGED_USER");
 
@@ -1595,7 +1700,7 @@ class _SerieState extends State<Serie> {
   }
 
   void _goToReviews() {
-    if (posty == 0 && postx == 5) {
+    if (posty == 0 && postx == 6) {
       Navigator.push(
         context,
         PageRouteBuilder(
@@ -1611,7 +1716,7 @@ class _SerieState extends State<Serie> {
   }
 
   void _goToComments() {
-    if (posty == 0 && postx == 4) {
+    if (posty == 0 && postx == 5) {
       Navigator.push(
         context,
         PageRouteBuilder(
@@ -1634,7 +1739,7 @@ class _SerieState extends State<Serie> {
         _selected_source = 0;
         selected_episode = postx;
         sources = seasons[selected_season].episodes[postx].sources;
-        if (posty == 0 && postx == 0) {
+        if (posty == 0 && postx == 1) {
           setState(() {
             visibileSourcesDialog = true;
           });
@@ -1659,8 +1764,18 @@ class _SerieState extends State<Serie> {
     }
   }
 
+  _resumeSeason() async {
+    if (posty == 0 && postx == 0 && resumableText.isNotEmpty) {
+      Player.playEpisode(
+          context: context,
+          id: await Player.getLastPlayedEpisodeDetail(widget.serie.id),
+          response: seasonResponse,
+          mainId: widget.serie.id);
+    }
+  }
+
   void _goToTrailer() async {
-    if (posty == 0 && postx == 1)
+    if (posty == 0 && postx == 2)
       Player.playTrailer(
         context,
         widget.serie.trailer.url,
@@ -1698,24 +1813,55 @@ class _SerieState extends State<Serie> {
           j++;
         }
       }
-
-      Player.openPlayer(
-          context,
-          _sources[_new_selected_source].id,
-          _sources[_new_selected_source].url,
-          widget.serie.title,
-          widget.serie.description,
-          false,
-          false);
-
-      // Navigator.push(
-      //   context,
-      //   PageRouteBuilder(
-      //     pageBuilder: (context, animation1, animation2) => VideoPlayer(sourcesList: _sources,selected_source:_new_selected_source,focused_source: _new_selected_source,poster: widget.serie,episode:selected_episode,season: selected_season,seasons:seasons ),
-      //     transitionDuration: Duration(seconds: 0),
-      //   ),
-      // );
+// var selectedSource = _sources[_new_selected_source].id ;
+      // seasons.asMap().forEach((key, series) {
+      //   series.episodes.asMap().forEach((key, episode) {
+      //     // _sources[_new_selected_source].id
+      //     episode.sources.asMap().forEach((key, value) {
+      //
+      //     });
+      //   });
+      // });
+      seasons.asMap().forEach((sk, seasons) {
+        seasons.episodes.asMap().forEach((ek, episode) {
+          episode.sources.asMap().forEach((sok, source) {
+            if (sources[_new_selected_source].id == source.id) {
+              Player.playEpisode(
+                  context: context,
+                  id: source.id,
+                  response: seasonResponse,
+                  mainId: widget.serie.id);
+            }
+          });
+        });
+      });
     }
+
+    // Player.openPlayer(
+    //     context,
+    //     _sources[_new_selected_source].id,
+    //     _sources[_new_selected_source].url,
+    //     widget.serie.title,
+    //     widget.serie.description,
+    //     false,
+    //     false);
+
+    // Navigator.push(
+    //   context,
+    //   PageRouteBuilder(
+    //     pageBuilder: (context, animation1, animation2) => VideoPlayer(sourcesList: _sources,selected_source:_new_selected_source,focused_source: _new_selected_source,poster: widget.serie,episode:selected_episode,season: selected_season,seasons:seasons ),
+    //     transitionDuration: Duration(seconds: 0),
+    //   ),
+    // );
+  }
+
+  void setupLastPlayedButton() {
+    var result = Player.getLastPlayedEpisodeDetail(widget.serie.id);
+    seasons.asMap().forEach((sk, seasons) {
+      seasons.episodes.asMap().forEach((ek, episode) {
+        episode.sources.asMap().forEach((sok, source) {});
+      });
+    });
   }
 
   void _openSource() async {
@@ -1784,6 +1930,21 @@ class _SerieState extends State<Serie> {
       Future.delayed(Duration(milliseconds: 200), () {
         _openSource();
       });
+    });
+  }
+
+  getResumableText() async {
+    var text = "";
+    var result = await Player.getLastPlayedEpisodeDetail(widget.serie.id);
+    seasons.asMap().forEach((sk, seasons) {
+      seasons.episodes.asMap().forEach((ek, episode) {
+        episode.sources.asMap().forEach((sok, source) {
+          if (source.id == result) text = "${seasons.title} | ${episode.title}";
+        });
+      });
+    });
+    setState(() {
+      resumableText = text;
     });
   }
 }

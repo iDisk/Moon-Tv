@@ -1,14 +1,13 @@
 import 'dart:convert';
 import 'dart:core';
-import 'dart:core';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_app_tv/api/api_rest.dart';
+import 'package:flutter_app_tv/model/season.dart';
 import 'dart:convert' as convert;
 import 'package:flutter_app_tv/model/subtitle.dart' as model;
-import 'package:image_fade/image_fade.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:url_launcher/url_launcher.dart';
 
@@ -17,6 +16,11 @@ import '../../model/subtitle.dart';
 
 class Player {
   static final platform = MethodChannel('VIDEO_PLAYER_CHANNEL');
+
+  static getLastPlayedEpisodeDetail(int id) async {
+    return await platform
+        .invokeMethod("getLastPlayedEpisodeDetail", {"id": id});
+  }
 
   static playTrailer(BuildContext context, String url, String title,
       String description) async {
@@ -34,6 +38,32 @@ class Player {
       Player.openPlayer(context, 0, url, title, description, false, false,
           isTrailer: true);
     }
+  }
+
+  static playMovie() {}
+
+  static playEpisode(
+      {BuildContext context,
+      int mainId,
+      int id,
+      String url,
+      String title,
+      String description,
+      List<Season> seasons,
+      String response}) async {
+    showProgress(context);
+    var subTitleList = await getSubtitlesList(id, false);
+    Navigator.pop(context);
+    platform.invokeMethod("playEpisodes", {
+      "mainId": mainId,
+      "id": id,
+      "url": url,
+      "title": title,
+      "description": description,
+      "resume": true,
+      "seasons": response,
+      'subTitle': convertToJson(subTitleList)
+    });
   }
 
   static openPlayer(BuildContext context, int id, String url, String title,
@@ -70,6 +100,12 @@ class Player {
     return jsonEncode(jsonData);
   }
 
+  static String convertToString(List<Season> seasons) {
+    List<Map<String, dynamic>> jsonData =
+        seasons.map((word) => word.toMap()).toList();
+    return jsonEncode(jsonData);
+  }
+
   static Future<List<model.Subtitle>> getSubtitlesList(
       int id, bool isMovie) async {
     var response;
@@ -100,6 +136,7 @@ class Player {
           }
         }
       }
+
     } catch (e) {}
     print("subtitles = ${subTitleList.map((e) => print(e.language))}");
     return subTitleList;
@@ -142,64 +179,6 @@ class Player {
       context: context,
       builder: (context) => WillPopScope(
         onWillPop: () => Future.value(true),
-        // child: Scaffold(
-        //   backgroundColor: Colors.white30,
-        //   body: Container(
-        //     padding: EdgeInsets.symmetric(horizontal: 150),
-        //     child: Center(
-        //       child: Column(
-        //         crossAxisAlignment: CrossAxisAlignment.center,
-        //         mainAxisAlignment: MainAxisAlignment.center,
-        //         children: [
-        //           Text("Moon TV",
-        //               style: TextStyle(color: Colors.white, fontSize: 35)),
-        //           SizedBox(height: 10,),
-        //           Text("Desea reanudar la transmision a $time mins?",
-        //               style: TextStyle(color: Colors.white, fontSize: 20)),
-        //           SizedBox(
-        //             height: 30,
-        //           ),
-        //           Row(
-        //             mainAxisAlignment: MainAxisAlignment.center,
-        //             children: [
-        //               Expanded(
-        //                 child: ElevatedButton(
-        //
-        //                   onPressed: () {
-        //                     Navigator.pop(context);
-        //                     launchPlayer(subTitleList, id, url, title,
-        //                         description, liveTV, isMovie, true);
-        //                   },
-        //                   child: Text("Yes"),
-        //                   style: ElevatedButton.styleFrom(
-        //                     shape: RoundedRectangleBorder(),
-        //                     backgroundColor: Colors.black87,
-        //                   ),
-        //                 ),
-        //               ),
-        //               SizedBox(
-        //                 width: 50,
-        //               ),
-        //               Expanded(
-        //                 child: ElevatedButton(
-        //                   onPressed: () {
-        //                     Navigator.pop(context);
-        //                     launchPlayer(subTitleList, id, url, title,
-        //                         description, liveTV, isMovie, false);
-        //                   },
-        //                   child: Text("No"),
-        //                   style: ElevatedButton.styleFrom(
-        //                       shape: RoundedRectangleBorder(),
-        //                       backgroundColor: Colors.black87),
-        //                 ),
-        //               )
-        //             ],
-        //           )
-        //         ],
-        //       ),
-        //     ),
-        //   ),
-        // ),
         child: ResumeDiaLog(time, subTitleList, id, url, title, description,
             liveTV, isMovie, true),
       ),

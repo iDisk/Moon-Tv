@@ -9,27 +9,34 @@ import android.util.Log
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
+import android.widget.Button
+import androidx.appcompat.widget.AppCompatImageView
+import androidx.appcompat.widget.AppCompatTextView
 import androidx.leanback.app.VideoSupportFragment
 import androidx.leanback.app.VideoSupportFragmentGlueHost
 import androidx.leanback.media.PlaybackTransportControlGlue
 import androidx.leanback.widget.PlaybackControlsRow
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.ui.SubtitleView
 import com.google.android.exoplayer2.util.MimeTypes
 import com.google.common.collect.ImmutableList
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.moontv.application.R
+import com.moontv.application.SeasonTimeManager
 import com.moontv.application.SubTitle
+import com.moontv.application.network.ApiInterface
+import com.moontv.application.network.RetrofitClient
 import com.moontv.application.player.adapter.ChooseSubtitleAdapter
 import org.json.JSONArray
 
 
-//import org.robolectric.shadows.ShadowContextImpl.CLASS_NAME
+class EpisodeFragment : VideoSupportFragment(), OnChangeSubtitleListener {
+    lateinit var seasonTimeManager: SeasonTimeManager
 
-
-class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
 
     private lateinit var mTransportControlGlue: PlaybackTransportControlGlue<ExoLeanbackPlayerAdapter>
     private lateinit var player: ExoPlayer
@@ -37,25 +44,57 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
     private var subTitle = ""
 
     private val mHandler = Handler()
+    private var nextEpisodeHandler = Handler()
+
+    private var timerRunnable: Runnable? = null
+
+    private var nextEpisodeRunnable = Runnable {
+        checkForNextEpisode()
+
+    }
+
+    private var isNextEpisodeDialogShowing = false
+
+    private fun checkForNextEpisode() {
+        Log.d("TAG", "checkForNextEpisode: ${player.duration - player.currentPosition}")
+        if (!isNextEpisodeDialogShowing && player.isPlaying) {
+            if (player.duration - player.currentPosition <= 15000) {
+                isNextEpisodeDialogShowing = true
+                if(seasonTimeManager.getNextEpisodeDetails() != null)
+                    dialogNextEpisode()
+            }
+
+        }
+        nextEpisodeHandler.postDelayed(nextEpisodeRunnable, 1000)
+    }
+
+    private val timerHandler = Handler()
     private var subTitles = mutableListOf<SubTitle>()
     private var selectedItem = 0
-
 
     private var mRunnable: Runnable = Runnable {
         mTransportControlGlue.host.hideControlsOverlay(true)
     }
 
     private val chooseSubtitleAdapter by lazy { ChooseSubtitleAdapter(context, subTitles, this) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        context?.let { seasonTimeManager = SeasonTimeManager(it) }
+        activity?.intent?.let {
+            seasonTimeManager?.setup(
+                it.getIntExtra("mainId", -1),
+                it.getIntExtra("id", -1),
+                it.getStringExtra("seasons") ?: ""
+            )
+        }
 
         activity?.apply {
 
             subTitle = activity?.intent?.getStringExtra("subTitle").orEmpty()
             encodeSubTitle()
-
             player = ExoPlayer.Builder(requireActivity()).build()
-            val glueHost = VideoSupportFragmentGlueHost(this@EPGVideoFragment)
+            val glueHost = VideoSupportFragmentGlueHost(this@EpisodeFragment)
             val subtitleView = findViewById<SubtitleView>(R.id.exo_subtitles)
             val playerAdapter = ExoLeanbackPlayerAdapter(this, player, 100, subtitleView)
             mTransportControlGlue = PlaybackTransportControlGlue(activity, playerAdapter)
@@ -65,7 +104,7 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
                         context = it,
                         playerAdapter,
                         subTitles.isNotEmpty(),
-                        this@EPGVideoFragment
+                        this@EpisodeFragment
                     )
                 }!!
 
@@ -80,12 +119,11 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
 
             playerAdapter.setRepeatAction(PlaybackControlsRow.RepeatAction.INDEX_NONE)
 
+            mTransportControlGlue.title = seasonTimeManager?.getTitle()
+            mTransportControlGlue.subtitle = seasonTimeManager?.getDescription()
 
-            mTransportControlGlue.title = activity?.intent?.getStringExtra("title")
-            mTransportControlGlue.subtitle = activity?.intent?.getStringExtra("description")
 
-
-            val uri = Uri.parse(activity?.intent?.getStringExtra("url"))
+            val uri = Uri.parse(seasonTimeManager?.getCurrentSource()?.url)
             val mediaItem: MediaItem.Builder = MediaItem.Builder().setUri(uri)
 
             if (subTitle.isNotEmpty()) {
@@ -104,14 +142,14 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
             player.setMediaItem(mediaItem.build())
             player.prepare()
             player.play()
-            if (activity?.intent?.getBooleanExtra("resume", false) == true) {
-                mTransportControlGlue.seekTo(getCurrentTime())
-                player.seekTo(getCurrentTime())
-            }
+//            if (activity?.intent?.getBooleanExtra("resume", false) == true) {
+//                mTransportControlGlue.seekTo(seasonTimeManager.getCurrentSourceTime())
+//                player.seekTo(seasonTimeManager.getCurrentSourceTime())
+//            }
             addPlayerListeners()
 
+            nextEpisodeHandler.postDelayed(nextEpisodeRunnable, 1000)
         }
-
     }
 
     private fun encodeSubTitle() {
@@ -135,10 +173,20 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
     override fun onPause() {
         super.onPause()
         mHandler.removeCallbacks(mRunnable)
+        nextEpisodeHandler.removeCallbacks(nextEpisodeRunnable)
+        if (timerRunnable != null)
+            timerHandler.removeCallbacks(timerRunnable!!)
+
         mTransportControlGlue.pause()
+
         if (!finish) {
-            saveCurrentTime(if (player.bufferedPercentage >= 98) 0L else player.currentPosition)
-        } else saveCurrentTime(0)
+            seasonTimeManager.save(if (player.bufferedPercentage >= 98) 0L else player.currentPosition)
+        } else {
+            if (seasonTimeManager.getNextEpisodeDetails() == null) {
+                seasonTimeManager.deleteSeasonTiming()
+            }
+            seasonTimeManager.save(0)
+        }
 
     }
 
@@ -160,11 +208,19 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
                 mTransportControlGlue.play()
             }
 
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                super.onIsPlayingChanged(isPlaying)
+            }
+
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                 when (playbackState) {
-
                     Player.STATE_ENDED -> {
-                        saveCurrentTime(0)
+                        seasonTimeManager.save(0)
+
+                        Log.d("TAG", "onPlayerStateChanged: ${seasonTimeManager.getNextEpisodeDetails()}")
+                        if (seasonTimeManager.getNextEpisodeDetails() == null) {
+                            seasonTimeManager.deleteSeasonTiming()
+                        }
                         finish = true
                         player.release()
                         activity?.finish()
@@ -174,21 +230,16 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
 
             override fun onPlayerError(error: PlaybackException) {
                 super.onPlayerError(error)
-                FirebaseCrashlytics.getInstance().recordException(
-                    Exception(
-                    "URL = ${activity?.intent?.getStringExtra("url")}," +
-                            "ID = ${activity?.intent?.getStringExtra("id")}" +
-                            "Error = ${error.stackTrace}")
-                )
             }
 
             override fun onPlayerErrorChanged(error: PlaybackException?) {
                 super.onPlayerErrorChanged(error)
                 FirebaseCrashlytics.getInstance().recordException(
                     Exception(
-                    "URL = ${activity?.intent?.getStringExtra("url")}," +
-                            "ID = ${activity?.intent?.getStringExtra("id")}" +
-                            "Error = ${error?.stackTrace}")
+                        "URL = ${activity?.intent?.getStringExtra("url")}," +
+                                "ID = ${activity?.intent?.getStringExtra("id")}" +
+                                "Error = ${error?.stackTrace}"
+                    )
                 )
             }
         })
@@ -254,14 +305,74 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
         recyclerView.adapter = chooseSubtitleAdapter
         dialog.show()
         recyclerView.requestFocus()
+    }
 
+    private fun dialogNextEpisode() {
+        var time = 10
+        var playNext = false
+        val dialog = Dialog(requireContext(), R.style.dialogTheme)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setCancelable(true)
+        dialog.setContentView(R.layout.next_episode_layout)
+        dialog.window?.setLayout(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT
+        )
+        val imageView = dialog.findViewById<AppCompatImageView>(R.id.appCompatImageView)
+        val title = dialog.findViewById<AppCompatTextView>(R.id.tvSeasonEpisodeTitle)
+        val subTitle = dialog.findViewById<AppCompatTextView>(R.id.tvEpisodeTitle)
+        val tvTimer = dialog.findViewById<AppCompatTextView>(R.id.tvTimer)
+        val playNow = dialog.findViewById<Button>(R.id.playNow)
+
+
+
+        playNow.setOnClickListener {
+            playNext = true
+            dialog.dismiss()
+        }
+        context?.let {
+            Glide.with(it).load(seasonTimeManager.getNextEpisodeDetails()?.image).centerCrop()
+                .into(imageView)
+        }
+        title.text =
+            "${seasonTimeManager.getNextSeasonDetails()?.title.orEmpty()} | ${seasonTimeManager.getNextEpisodeDetails()?.title.orEmpty()}"
+        subTitle.text = seasonTimeManager.getNextEpisodeDetails()?.description.orEmpty()
+
+        dialog.setOnDismissListener {
+            if (playNext) {
+                isNextEpisodeDialogShowing = false
+                playNextEpisode()
+                player.pause()
+            }
+        }
+
+        timerRunnable = Runnable {
+            tvTimer.text = "Playing Next Episode in $time Seconds"
+            time--
+            if (time != 0)
+                timerHandler.postDelayed(timerRunnable!!, 1000)
+            else {
+                playNext = true
+                dialog.dismiss()
+            }
+        }
+        timerHandler.postDelayed(timerRunnable!!, 1000)
+        dialog.show()
+
+        playNow.requestFocus()
+    }
+
+    private fun playNextEpisode() {
+        if (seasonTimeManager.getNextEpisodeDetails() != null) {
+            seasonTimeManager.playNextEpisode()
+            getSubtitle()
+        } else activity?.finish()
     }
 
     private fun setupVideoPlayer(url: String) {
-        val currentPosition = player.currentPosition
         player.release()
         player = ExoPlayer.Builder(requireActivity()).build()
-        val glueHost = VideoSupportFragmentGlueHost(this@EPGVideoFragment)
+        val glueHost = VideoSupportFragmentGlueHost(this@EpisodeFragment)
         val subtitleView = activity?.findViewById<SubtitleView>(R.id.exo_subtitles)
         val playerAdapter = ExoLeanbackPlayerAdapter(context, player, 100, subtitleView)
         mTransportControlGlue = PlaybackTransportControlGlue(activity, playerAdapter)
@@ -270,8 +381,8 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
                 VideoPlayerGLue(
                     context = it,
                     playerAdapter,
-                    subTitle.isNotEmpty(),
-                    this@EPGVideoFragment
+                    subTitles.isNotEmpty(),
+                    this@EpisodeFragment
                 )
             }!!
 
@@ -287,11 +398,11 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
         playerAdapter.setRepeatAction(PlaybackControlsRow.RepeatAction.INDEX_NONE)
 
 
-        mTransportControlGlue.title = activity?.intent?.getStringExtra("title")
-        mTransportControlGlue.subtitle = activity?.intent?.getStringExtra("description")
+        mTransportControlGlue.title = seasonTimeManager?.getTitle()
+        mTransportControlGlue.subtitle = seasonTimeManager?.getDescription()
 
 
-        val uri = Uri.parse(activity?.intent?.getStringExtra("url"))
+        val uri = Uri.parse(seasonTimeManager?.getCurrentSource()?.url.orEmpty())
         val mediaItem: MediaItem.Builder = MediaItem.Builder().setUri(uri)
 
         val subtitle: MediaItem.SubtitleConfiguration =
@@ -308,9 +419,44 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
         player.setMediaItem(mediaItem.build())
         player.prepare()
         player.play()
-        player.seekTo(currentPosition)
-        mTransportControlGlue.seekTo(currentPosition)
+        player.seekTo(0)
+        mTransportControlGlue.seekTo(0)
         addPlayerListeners()
     }
+
+    private fun getSubtitle() {
+        val retrofit = RetrofitClient.getInstance()
+        val apiInterface = retrofit.create(ApiInterface::class.java)
+        lifecycleScope.launchWhenCreated {
+            try {
+                var index = 0
+                val response = apiInterface.getSubtitle(seasonTimeManager.getCurrentSource().id)
+
+                subTitles.clear()
+                if (response.isSuccessful) {
+                    response.body().orEmpty().forEach { subTitle ->
+                        subTitle.subtitles.forEach {
+                            subTitles.add(
+                                SubTitle(
+                                    "${it.id}",
+                                    it.type,
+                                    it.url,
+                                    subTitle.image,
+                                    subTitle.language,
+                                    index == 0
+                                )
+                            )
+                            index++
+                        }
+                    }
+                }
+                setupVideoPlayer(subTitles.firstOrNull()?.url.orEmpty())
+            } catch (Ex: Exception) {
+                Log.e("Error", Ex.localizedMessage)
+            }
+        }
+
+    }
+
 }
 

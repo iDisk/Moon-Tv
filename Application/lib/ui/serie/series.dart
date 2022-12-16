@@ -43,10 +43,6 @@ class Series extends StatefulWidget {
   _SeriesState createState() => _SeriesState();
 }
 
-
-
-
-
 class _SeriesState extends ResumableState<Series> {
   int postx = 3;
   int posty = -2;
@@ -124,6 +120,7 @@ class _SeriesState extends ResumableState<Series> {
       print(logged);
     });
   }
+
   void _getGenres()  async{
     genres.clear();
     Genre genre = Genre(id: 0,title: "All genres");
@@ -148,16 +145,19 @@ class _SeriesState extends ResumableState<Series> {
       _counts_x_line_saver.add(items_line_count);
     }
   }
+
   void _getList()  async{
     series.clear();
     page =0;
     _showLoading();
     var response =await apiRest.getSeriesByFiltres(genres[_selected_genre].id, order[selected_sort -1],page);
+    print("here ==> $response");
     if(response == null){
       _showTryAgain();
     }else{
       if (response.statusCode == 200) {
         var jsonData =  convert.jsonDecode(response.body);
+        print("here ==> ${jsonData}");
         for(Map i in jsonData){
           Poster poster = Poster.fromJson(i);
           series.add(poster);
@@ -1133,9 +1133,6 @@ class _SeriesState extends ResumableState<Series> {
     });
   }
 }
-
-
-
 
 class MyBehavior extends ScrollBehavior {
   @override
