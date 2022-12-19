@@ -3,8 +3,8 @@ package com.moontv.application.utils
 import android.content.Context
 import android.content.SharedPreferences
 
+/** shared preference handle class*/
 class PrefUtils {
-
     companion object {
         private var singleton: PrefUtils? = null
         private lateinit var preferences: SharedPreferences

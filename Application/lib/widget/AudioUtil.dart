@@ -1,5 +1,7 @@
 import 'package:assets_audio_player/assets_audio_player.dart';
 
+
+/// this file helps for playing sound
 class AudioUtil {
   final _bellPlayer = AssetsAudioPlayer();
   var _tickPlayer;
@@ -16,7 +18,7 @@ class AudioUtil {
     _bellPlayer.open(_bellAudio);
   }
 
-  // playTickSound() => _tickPlayer.play();
+  //play tick sound
   playTickSound() {
     if (_tickPlayer == null) {
       _tickPlayer = AssetsAudioPlayer();
@@ -26,5 +28,6 @@ class AudioUtil {
     _tickPlayer.play();
   }
 
+  //play bell sound
   playBellSound() => _bellPlayer.play();
 }

@@ -1,4 +1,4 @@
-package com.moontv.application
+package com.moontv.application.model
 
 data class SubTitle(
     val id: String,

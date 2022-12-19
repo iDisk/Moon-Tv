@@ -8,7 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.moontv.application.R
-import com.moontv.application.SubTitle
+import com.moontv.application.model.SubTitle
 import com.moontv.application.player.OnChangeSubtitleListener
 
 

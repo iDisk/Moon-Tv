@@ -21,7 +21,7 @@ import com.google.android.exoplayer2.util.MimeTypes
 import com.google.common.collect.ImmutableList
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.moontv.application.R
-import com.moontv.application.SubTitle
+import com.moontv.application.model.SubTitle
 import com.moontv.application.player.adapter.ChooseSubtitleAdapter
 import org.json.JSONArray
 

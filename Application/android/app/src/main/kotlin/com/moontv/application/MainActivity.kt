@@ -30,6 +30,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private var playerLaunchedTimeStamp = 0L
+
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         prefUtils = PrefUtils.with(context)
@@ -59,9 +60,13 @@ class MainActivity : FlutterActivity() {
             } else if (call.method == "getVideoLastTime") {
                 Log.d("TAG", "configureFlutterEngine: ${call.argument<Int>("id")}")
                 result.success(getCurrentTime(call.argument<Int>("id") ?: 0))
-            } else if (call.method == "getLastPlayedEpisodeDetail") {
+            }
+            /** it will return episodes source id from the main season id*/
+            else if (call.method == "getLastPlayedEpisodeDetail") {
                 result.success(prefUtils.getLastPlayedEpisode(call.argument<Int>("id") ?: -1))
-            } else if (call.method == "playEpisodes" && playerLaunchedTimeStamp < System.currentTimeMillis()) {
+            }
+            /** launch episode fragment and pass data*/
+            else if (call.method == "playEpisodes" && playerLaunchedTimeStamp < System.currentTimeMillis()) {
                 playerLaunchedTimeStamp = (System.currentTimeMillis() + 500)
 
                 val intent = Intent(this@MainActivity, PlaybackActivity::class.java)
@@ -87,6 +92,7 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    //returns last played time of the movie
     private fun getCurrentTime(id: Int): Long {
         var time = 0L
         context.let { context ->
@@ -97,4 +103,5 @@ class MainActivity : FlutterActivity() {
         Log.d("TAG", "getCurrentTime: ${time}")
         return time
     }
+
 }

@@ -36,6 +36,7 @@ class _SplashState extends State<Splash> with TickerProviderStateMixin {
   void initState() {
     // TODO: implement initState
     super.initState();
+    //play bell sound
     AudioUtil().playBellSound();
     initSettings();
     _check();

@@ -15,6 +15,7 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.moontv.application.R
 
 
+/** Trailer video player */
 class TrailerFragment : VideoSupportFragment(), OnChangeSubtitleListener {
 
     private lateinit var mTransportControlGlue: PlaybackTransportControlGlue<ExoLeanbackPlayerAdapter>

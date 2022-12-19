@@ -22,6 +22,7 @@ class Player {
         .invokeMethod("getLastPlayedEpisodeDetail", {"id": id});
   }
 
+  //play trailer
   static playTrailer(BuildContext context, String url, String title,
       String description) async {
     print("trailer played Url == $url");
@@ -40,8 +41,7 @@ class Player {
     }
   }
 
-  static playMovie() {}
-
+  ///play episode
   static playEpisode(
       {BuildContext context,
       int mainId,
@@ -94,12 +94,14 @@ class Player {
     }
   }
 
+  ///convert list of subtitle to string
   static String convertToJson(List<Subtitle> subTitles) {
     List<Map<String, dynamic>> jsonData =
         subTitles.map((word) => word.toMap()).toList();
     return jsonEncode(jsonData);
   }
 
+  ///convert season to string
   static String convertToString(List<Season> seasons) {
     List<Map<String, dynamic>> jsonData =
         seasons.map((word) => word.toMap()).toList();
@@ -136,7 +138,6 @@ class Player {
           }
         }
       }
-
     } catch (e) {}
     print("subtitles = ${subTitleList.map((e) => print(e.language))}");
     return subTitleList;
@@ -210,6 +211,7 @@ class Player {
   }
 }
 
+///resume dialog
 class ResumeDiaLog extends StatefulWidget {
   String time;
   List<Subtitle> subTitleList;

@@ -7,6 +7,7 @@
 
 
     <View
+        android:id="@+id/view2"
         android:layout_width="0dp"
         android:layout_height="150dp"
         android:background="@color/dark_bg"
@@ -15,20 +16,23 @@
         app:layout_constraintStart_toStartOf="parent" />
 
 
-    <Button
+    <ImageButton
         android:id="@+id/playNow"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="20dp"
         android:layout_marginBottom="16dp"
-        android:background="#FFF"
+        android:background="@null"
         android:focusable="true"
         android:focusableInTouchMode="true"
         android:focusedByDefault="true"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_play"
+        android:elevation="10dp"
         android:text="Play NOW"
-        android:textColor="@color/black"
+
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/tvEpisodeTitle" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/appCompatImageView"
@@ -45,10 +49,10 @@
         android:layout_margin="8dp"
         android:layout_marginStart="8dp"
         android:text="S1-E20"
-        android:textAppearance="?android:textAppearanceLarge"
+        android:textAppearance="?android:textAppearanceMedium"
         app:layout_constraintEnd_toStartOf="@+id/tvTimer"
         app:layout_constraintStart_toEndOf="@+id/appCompatImageView"
-        app:layout_constraintTop_toBottomOf="@+id/tvTimer" />
+        app:layout_constraintTop_toTopOf="@+id/view2" />
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvEpisodeTitle"
@@ -56,7 +60,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
         android:layout_marginStart="8dp"
-        android:textAppearance="?android:textAppearanceMedium"
+        android:textAppearance="?android:textAppearanceSmall"
         app:layout_constraintEnd_toStartOf="@+id/tvTimer"
         app:layout_constraintStart_toEndOf="@+id/appCompatImageView"
         app:layout_constraintTop_toBottomOf="@+id/tvSeasonEpisodeTitle"

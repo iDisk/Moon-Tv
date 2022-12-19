@@ -6,7 +6,7 @@ import com.moontv.application.model.Season
 import java.lang.reflect.Type
 
 
-
+//convert string to list using gson converter factory
 inline fun <reified T> String.convertToListObject(): List<T>? {
     val listType: Type = object : TypeToken<List<T?>?>() {}.type
     return Gson().fromJson<List<T>>(this, listType)

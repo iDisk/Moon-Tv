@@ -9,6 +9,7 @@ import com.moontv.application.player.EpisodeFragment
 import com.moontv.application.player.TrailerFragment
 
 
+
 class PlaybackActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -16,6 +17,7 @@ class PlaybackActivity : FragmentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (savedInstanceState == null) {
 
+            /** show fragment according to get data from flutter activity.*/
             supportFragmentManager.beginTransaction()
                 .replace(
                     R.id.container,
