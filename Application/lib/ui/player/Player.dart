@@ -50,9 +50,10 @@ class Player {
       String title,
       String description,
       List<Season> seasons,
-      String response}) async {
+      String response,
+      episodeId:int}) async {
     showProgress(context);
-    var subTitleList = await getSubtitlesList(id, false);
+    var subTitleList = await getSubtitlesList(episodeId, false);
     Navigator.pop(context);
     platform.invokeMethod("playEpisodes", {
       "mainId": mainId,

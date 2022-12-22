@@ -68,6 +68,10 @@ class SeasonTimeManager {
     fun getCurrentSource() =
         seasons[indexOfSeason].episodes[indexOfEpisode].sources[indexOfSource]
 
+    /** get current episode source object*/
+    fun getCurrentEpisode() =
+        seasons[indexOfSeason].episodes[indexOfEpisode]
+
     /** save the current episode time*/
     fun save(time: Long) {
         prefUtils.saveEpisodeTime(mainSeasonId, getCurrentSource().id, time)

@@ -143,10 +143,10 @@ class EpisodeFragment : VideoSupportFragment(), OnChangeSubtitleListener {
             player.setMediaItem(mediaItem.build())
             player.prepare()
             player.play()
-//            if (activity?.intent?.getBooleanExtra("resume", false) == true) {
-//                mTransportControlGlue.seekTo(seasonTimeManager.getCurrentSourceTime())
-//                player.seekTo(seasonTimeManager.getCurrentSourceTime())
-//            }
+            if (activity?.intent?.getBooleanExtra("resume", false) == true) {
+                mTransportControlGlue.seekTo(seasonTimeManager.getCurrentSourceTime())
+                player.seekTo(seasonTimeManager.getCurrentSourceTime())
+            }
             addPlayerListeners()
 
             nextEpisodeHandler.postDelayed(nextEpisodeRunnable, 1000)
@@ -438,7 +438,7 @@ class EpisodeFragment : VideoSupportFragment(), OnChangeSubtitleListener {
         lifecycleScope.launchWhenCreated {
             try {
                 var index = 0
-                val response = apiInterface.getSubtitle(seasonTimeManager.getCurrentSource().id)
+                val response = apiInterface.getSubtitle(seasonTimeManager.getCurrentEpisode().id)
 
                 subTitles.clear()
                 if (response.isSuccessful) {

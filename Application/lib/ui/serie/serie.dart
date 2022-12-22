@@ -483,7 +483,6 @@ class _SerieState extends State<Serie> with WidgetsBindingObserver {
                     ),
                   ),
                 ),
-
                 Container(
                     child: ScrollConfiguration(
                   behavior: MyBehavior(),
@@ -1351,7 +1350,7 @@ class _SerieState extends State<Serie> with WidgetsBindingObserver {
                                             child: AnimatedContainer(
                                               onEnd: () {
                                                 if (postx == index &&
-                                                    posty == 2){
+                                                    posty == 2) {
                                                   //play bell sound
                                                   AudioUtil().playTickSound();
                                                 }
@@ -1740,8 +1739,8 @@ class _SerieState extends State<Serie> with WidgetsBindingObserver {
       if (seasons[0].episodes.length > 0) {
         _focused_source = 0;
         _selected_source = 0;
-        selected_episode = postx;
-        sources = seasons[selected_season].episodes[postx].sources;
+        selected_episode = 0;
+        sources = seasons[0].episodes[0].sources;
         if (posty == 0 && postx == 1) {
           setState(() {
             visibileSourcesDialog = true;
@@ -1770,11 +1769,29 @@ class _SerieState extends State<Serie> with WidgetsBindingObserver {
   ///resume season button click
   _resumeSeason() async {
     if (posty == 0 && postx == 0 && resumableText.isNotEmpty) {
-      Player.playEpisode(
-          context: context,
-          id: await Player.getLastPlayedEpisodeDetail(widget.serie.id),
-          response: seasonResponse,
-          mainId: widget.serie.id);
+      // Player.playEpisode(
+      //     context: context,
+      //
+      //     response: seasonResponse,
+      //     mainId: widget.serie.id);
+
+      var id = await Player.getLastPlayedEpisodeDetail(widget.serie.id);
+
+      seasons.asMap().forEach((sk, seasons) {
+        seasons.episodes.asMap().forEach((ek, episode) {
+          episode.sources.asMap().forEach((sok, source) {
+            if (id == source.id) {
+              Player.playEpisode(
+                  context: context,
+                  id: source.id,
+                  response: seasonResponse,
+                  seasons: this.seasons,
+                  mainId: widget.serie.id,
+                  episodeId: episode.id);
+            }
+          });
+        });
+      });
     }
   }
 
@@ -1831,11 +1848,13 @@ class _SerieState extends State<Serie> with WidgetsBindingObserver {
         seasons.episodes.asMap().forEach((ek, episode) {
           episode.sources.asMap().forEach((sok, source) {
             if (sources[_new_selected_source].id == source.id) {
-              Player.playEpisode(
-                  context: context,
-                  id: source.id,
-                  response: seasonResponse,
-                  mainId: widget.serie.id);
+                Player.playEpisode(
+                    context: context,
+                    id: source.id,
+                    response: seasonResponse,
+                    seasons: this.seasons,
+                    mainId: widget.serie.id,
+                    episodeId: episode.id);
             }
           });
         });
