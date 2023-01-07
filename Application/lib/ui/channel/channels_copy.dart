@@ -1,4 +1,3 @@
-import 'package:better_player/better_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +23,6 @@ import 'package:flutter_app_tv/ui/movie/movie_loading_widget.dart';
 import 'package:flutter_app_tv/ui/movie/movie_short_detail.dart';
 import 'package:flutter_app_tv/ui/movie/movie_widget.dart';
 import 'package:flutter_app_tv/ui/movie/movies.dart';
-import 'package:flutter_app_tv/ui/player/Player.dart';
 import 'package:flutter_app_tv/ui/search/search.dart';
 import 'package:flutter_app_tv/ui/serie/series.dart';
 import 'package:flutter_app_tv/ui/setting/settings.dart';
@@ -95,9 +93,6 @@ class _ChannelsState extends ResumableState<Channels> {
 
   bool logged;
   Image image = Image.asset("assets/images/profile.jpg");
-  BetterPlayerController _betterPlayerController;
-
-  int onClickCount = 1;
 
   @override
   void initState() {
@@ -105,44 +100,11 @@ class _ChannelsState extends ResumableState<Channels> {
     super.initState();
     Future.delayed(Duration.zero, () {
       FocusScope.of(context).requestFocus(home_focus_node);
+      _getCountries();
+      _getCategories();
       _getList();
       getLogged();
     });
-    initPlayer();
-  }
-
-  void initPlayer() {
-    _betterPlayerController = BetterPlayerController(
-      const BetterPlayerConfiguration(
-        autoPlay: true,
-        fit: BoxFit.fill,
-        allowedScreenSleep: false,
-        autoDispose: true,
-        expandToFill: true,
-        looping: true,
-        aspectRatio: 16 / 9,
-        controlsConfiguration: BetterPlayerControlsConfiguration(
-          enableOverflowMenu: false,
-          showControlsOnInitialize: false,
-          enableRetry: true,
-          showControls: false,
-        ),
-      ),
-    );
-  }
-
-  void _setupDataSource() async {
-    print("My List ==> ${channles[_focused_channel].m3U8Source.url}");
-    BetterPlayerDataSource dataSource = BetterPlayerDataSource(
-        BetterPlayerDataSourceType.network,
-        channles[_focused_channel].m3U8Source.url,
-        // "https://moctobpltc-i.akamaihd.net/hls/live/571329/eight/playlist.m3u8",
-        // "http://137.184.38.122:80/play/RMJY86lyeSb1j4cLl0Ylj9tGNR0ucnfjASpLPK0pkAI/m3u8",
-        // "http://137.184.38.122:80/play/RMJY86lyeSb1j4cLl0Ylj9tGNR0ucnfjASpLPK0pkAI/m3u8",
-        videoFormat: BetterPlayerVideoFormat.hls,
-        liveStream: true);
-    _betterPlayerController.setupDataSource(dataSource);
-    _betterPlayerController.play();
   }
 
   @override
@@ -150,9 +112,6 @@ class _ChannelsState extends ResumableState<Channels> {
     // TODO: implement onResume
     super.onResume();
     getLogged();
-    if(_betterPlayerController != null){
-
-    }
   }
 
   Future<String> getLogged() async {
@@ -171,13 +130,48 @@ class _ChannelsState extends ResumableState<Channels> {
     });
   }
 
+  void _getCountries() async {
+    countries.clear();
+    Country genre = Country(id: 0, title: "All countries");
+    countries.add(genre);
+    var response = await apiRest.getCountries();
+    if (response != null) {
+      if (response.statusCode == 200) {
+        var jsonData = convert.jsonDecode(response.body);
+        for (Map i in jsonData) {
+          Country genre = Country.fromJson(i);
+          countries.add(genre);
+        }
+      }
+    }
+  }
+
+  void _getCategories() async {
+    categories.clear();
+    Category category = Category(id: 0, title: "All Categories");
+    categories.add(category);
+    var response = await apiRest.getCategories();
+    if (response != null) {
+      if (response.statusCode == 200) {
+        var jsonData = convert.jsonDecode(response.body);
+        for (Map i in jsonData) {
+          Category category = Category.fromJson(i);
+          categories.add(category);
+        }
+      }
+    }
+  }
+
   void _getList() async {
     channles.clear();
     page = 0;
     _showLoading();
     print(selected_sort);
     var response = await apiRest.getChannelsByFiltres(
-        0, 0, order[selected_sort - 2], page);
+        countries[_selected_country].id,
+        categories[_selected_category].id,
+        order[selected_sort - 2],
+        page);
     if (response == null) {
       _showTryAgain();
     } else {
@@ -188,6 +182,7 @@ class _ChannelsState extends ResumableState<Channels> {
           var source = poster.sources.firstWhere(
               (element) => element.type == "m3u8",
               orElse: () => null);
+
           if (source != null) {
             poster.m3U8Source = source;
             channles.add(poster);
@@ -217,8 +212,8 @@ class _ChannelsState extends ResumableState<Channels> {
 
   void _loadMore() async {
     var response = await apiRest.getChannelsByFiltres(
-        0,
-        0,
+        countries[_selected_country].id,
+        categories[_selected_category].id,
         order[selected_sort - 1],
         page);
     if (response != null) {
@@ -226,13 +221,7 @@ class _ChannelsState extends ResumableState<Channels> {
         var jsonData = convert.jsonDecode(response.body);
         for (Map i in jsonData) {
           Channel poster = Channel.fromJson(i);
-          var source = poster.sources.firstWhere(
-                  (element) => element.type == "m3u8",
-              orElse: () => null);
-          if (source != null) {
-            poster.m3U8Source = source;
-            channles.add(poster);
-          }
+          channles.add(poster);
         }
         page++;
       }
@@ -282,9 +271,11 @@ class _ChannelsState extends ResumableState<Channels> {
               RawKeyDownEvent rawKeyDownEvent = event;
               RawKeyEventDataAndroid rawKeyEventDataAndroid =
                   rawKeyDownEvent.data;
+
               switch (rawKeyEventDataAndroid.keyCode) {
                 case KEY_CENTER:
                   _selectFilter();
+
                   _goToSearch();
                   _goToHome();
                   _goToMovies();
@@ -292,11 +283,21 @@ class _ChannelsState extends ResumableState<Channels> {
                   _goToMyList();
                   _goToSettings();
                   _goToProfile();
+
                   _goToChannelDetail();
                   _tryAgain();
+                  if (_visibile_categories_dialog == true) {
+                    _selectedCategory();
+                  } else {
+                    _showCategoriesDialog();
+                  }
+                  if (_visibile_countries_dialog == true) {
+                    _selectedCountry();
+                  } else {
+                    _showCountriesDialog();
+                  }
                   break;
                 case KEY_UP:
-                  onClickCount =1;
                   if (_visibile_loading) {
                     print("playing sound ");
                     break;
@@ -338,7 +339,6 @@ class _ChannelsState extends ResumableState<Channels> {
                   }
                   break;
                 case KEY_DOWN:
-                  onClickCount =1;
                   if (_visibile_error) {
                     if (posty < -1)
                       posty++;
@@ -386,7 +386,6 @@ class _ChannelsState extends ResumableState<Channels> {
                   }
                   break;
                 case KEY_LEFT:
-                  onClickCount =1;
                   if (_visibile_categories_dialog ||
                       _visibile_countries_dialog) {
                     print("playing sound ");
@@ -421,7 +420,6 @@ class _ChannelsState extends ResumableState<Channels> {
                   }
                   break;
                 case KEY_RIGHT:
-                  onClickCount =1;
                   if (_visibile_categories_dialog ||
                       _visibile_countries_dialog) {
                     print("playing sound ");
@@ -484,10 +482,10 @@ class _ChannelsState extends ResumableState<Channels> {
           child: Stack(
             children: [
               Positioned(
-                  left: 0,
+                  right: 0,
                   top: 0,
-                  right: MediaQuery.of(context).size.width / 2,
-                  bottom: MediaQuery.of(context).size.height / 2,
+                  left: MediaQuery.of(context).size.width / 4,
+                  bottom: MediaQuery.of(context).size.height / 4,
                   child: ImageFade(
                       image: (channles.length > 0)
                           ? CachedNetworkImageProvider(
@@ -502,7 +500,7 @@ class _ChannelsState extends ResumableState<Channels> {
                 child: Container(
                     decoration: BoxDecoration(
                         gradient: LinearGradient(
-                  begin: Alignment.centerRight,
+                  begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   colors: [
                     Colors.black,
@@ -532,22 +530,6 @@ class _ChannelsState extends ResumableState<Channels> {
                       ],
                     ))),
               ),
-              if (_betterPlayerController != null)
-                Positioned(
-                    right: 0,
-                    top: 0,
-                    left: MediaQuery.of(context).size.width / 2,
-                    bottom: MediaQuery.of(context).size.height / 2,
-                    child: Container(
-                      width: MediaQuery.of(context).size.width / 3,
-                      height: MediaQuery.of(context).size.height / 2,
-                      color: Colors.red,
-                      child: AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child: BetterPlayer(
-                            controller: _betterPlayerController,
-                          )),
-                    )),
               NavigationWidget(
                   postx: postx,
                   posty: posty,
@@ -559,17 +541,11 @@ class _ChannelsState extends ResumableState<Channels> {
               if (channles.length > 0 && !_visibile_loading && !_visibile_error)
                 AnimatedPositioned(
                     top: (posty < 0) ? 70 : 40,
-                    left: 50,
+                    left: 0,
                     right: 0,
-                    bottom: 0,
                     duration: Duration(milliseconds: 200),
-                    child: Text(
-                      channles[_focused_channel].title,
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900),
-                    )),
+                    child: MovieShortDetailWidget(
+                        channel: channles[_focused_channel])),
               Positioned(
                 top: 10,
                 left: 45,
@@ -604,6 +580,333 @@ class _ChannelsState extends ResumableState<Channels> {
                       : (MediaQuery.of(context).size.height / 2) + 50,
                   child: Column(
                     children: [
+                      Container(
+                        padding: EdgeInsets.only(left: 45, right: 50),
+                        height: 50,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        posty = -1;
+                                        postx = 0;
+                                        _showCategoriesDialog();
+                                      },
+                                      child: Container(
+                                        padding:
+                                            EdgeInsets.only(left: 7, right: 0),
+                                        margin:
+                                            EdgeInsets.symmetric(vertical: 7),
+                                        height: 50,
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              categories[_selected_category]
+                                                  .title,
+                                              style: TextStyle(
+                                                  color: (posty == -1 &&
+                                                          postx == 0)
+                                                      ? Colors.black
+                                                      : Colors.white70,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w700),
+                                            ),
+                                            Icon(
+                                              Icons.arrow_drop_down,
+                                              color: (posty == -1 && postx == 0)
+                                                  ? Colors.black
+                                                  : Colors.white70,
+                                              size: 30,
+                                            ),
+                                          ],
+                                        ),
+                                        decoration: BoxDecoration(
+                                            color: (posty == -1 && postx == 0)
+                                                ? Colors.white
+                                                : Colors.transparent,
+                                            border: Border.all(
+                                                color: Colors.white70,
+                                                width: 2),
+                                            borderRadius:
+                                                BorderRadius.circular(5)),
+                                      ),
+                                    ),
+                                    SizedBox(width: 7),
+                                    GestureDetector(
+                                      onTap: () {
+                                        posty = -1;
+                                        postx = 1;
+                                        _showCountriesDialog();
+                                      },
+                                      child: Container(
+                                        padding:
+                                            EdgeInsets.only(left: 10, right: 0),
+                                        margin:
+                                            EdgeInsets.symmetric(vertical: 7),
+                                        height: 50,
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              countries[_selected_country]
+                                                  .title,
+                                              style: TextStyle(
+                                                  color: (posty == -1 &&
+                                                          postx == 1)
+                                                      ? Colors.black
+                                                      : Colors.white70,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w700),
+                                            ),
+                                            Icon(
+                                              Icons.arrow_drop_down,
+                                              color: (posty == -1 && postx == 1)
+                                                  ? Colors.black
+                                                  : Colors.white70,
+                                              size: 30,
+                                            ),
+                                          ],
+                                        ),
+                                        decoration: BoxDecoration(
+                                            color: (posty == -1 && postx == 1)
+                                                ? Colors.white
+                                                : Colors.transparent,
+                                            border: Border.all(
+                                                color: Colors.white70,
+                                                width: 2),
+                                            borderRadius:
+                                                BorderRadius.circular(5)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            AnimatedOpacity(
+                              opacity: (posty == -1 && postx > 0) ? 1 : 0.8,
+                              duration: Duration(milliseconds: 250),
+                              child: Container(
+                                height: 50,
+                                margin: EdgeInsets.symmetric(vertical: 7),
+                                decoration: BoxDecoration(
+                                    border: Border.all(
+                                        color: Colors.white, width: 2),
+                                    borderRadius: BorderRadius.circular(5)),
+                                child: Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          posty = -1;
+                                          postx = 2;
+                                          Future.delayed(
+                                              Duration(milliseconds: 50), () {
+                                            _selectFilter();
+                                          });
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 12),
+                                        height: 50,
+                                        color: ((posty == -1 && postx == 2) ||
+                                                selected_sort == 2)
+                                            ? Colors.white
+                                            : Colors.transparent,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.access_time,
+                                              color: ((posty == -1 &&
+                                                          postx == 2) ||
+                                                      selected_sort == 2)
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                              size: 18,
+                                            ),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              "Newest",
+                                              style: TextStyle(
+                                                  color: ((posty == -1 &&
+                                                              postx == 2) ||
+                                                          selected_sort == 2)
+                                                      ? Colors.black
+                                                      : Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          posty = -1;
+                                          postx = 3;
+                                          Future.delayed(
+                                              Duration(milliseconds: 50), () {
+                                            _selectFilter();
+                                          });
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 12),
+                                        height: 50,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.remove_red_eye,
+                                              color: ((posty == -1 &&
+                                                          postx == 3) ||
+                                                      selected_sort == 3)
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                              size: 18,
+                                            ),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              "Views",
+                                              style: TextStyle(
+                                                  color: ((posty == -1 &&
+                                                              postx == 3) ||
+                                                          selected_sort == 3)
+                                                      ? Colors.black
+                                                      : Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700),
+                                            ),
+                                          ],
+                                        ),
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                              left: BorderSide(
+                                                  color: Colors.white,
+                                                  width: 1)),
+                                          color: ((posty == -1 && postx == 3) ||
+                                                  selected_sort == 3)
+                                              ? Colors.white
+                                              : Colors.transparent,
+                                        ),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          posty = -1;
+                                          postx = 4;
+                                          Future.delayed(
+                                              Duration(milliseconds: 50), () {
+                                            _selectFilter();
+                                          });
+                                        });
+                                      },
+                                      child: Container(
+                                        height: 50,
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 12),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.star_half,
+                                              color: ((posty == -1 &&
+                                                          postx == 4) ||
+                                                      selected_sort == 4)
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                              size: 18,
+                                            ),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              "Rating",
+                                              style: TextStyle(
+                                                  color: ((posty == -1 &&
+                                                              postx == 4) ||
+                                                          selected_sort == 4)
+                                                      ? Colors.black
+                                                      : Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700),
+                                            ),
+                                          ],
+                                        ),
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                              left: BorderSide(
+                                                  color: Colors.white,
+                                                  width: 1)),
+                                          color: ((posty == -1 && postx == 4) ||
+                                                  selected_sort == 4)
+                                              ? Colors.white
+                                              : Colors.transparent,
+                                        ),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          posty = -1;
+                                          postx = 5;
+                                          Future.delayed(
+                                              Duration(milliseconds: 50), () {
+                                            _selectFilter();
+                                          });
+                                        });
+                                      },
+                                      child: Container(
+                                        height: 50,
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 12),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.text_fields,
+                                              color: ((posty == -1 &&
+                                                          postx == 5) ||
+                                                      selected_sort == 5)
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                              size: 18,
+                                            ),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              "Title",
+                                              style: TextStyle(
+                                                  color: ((posty == -1 &&
+                                                              postx == 5) ||
+                                                          selected_sort == 5)
+                                                      ? Colors.black
+                                                      : Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700),
+                                            ),
+                                          ],
+                                        ),
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                              left: BorderSide(
+                                                  color: Colors.white,
+                                                  width: 1)),
+                                          color: ((posty == -1 && postx == 5) ||
+                                                  selected_sort == 5)
+                                              ? Colors.white
+                                              : Colors.transparent,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
                       Expanded(
                         child: Container(
                           child: ScrollConfiguration(
@@ -634,6 +937,22 @@ class _ChannelsState extends ResumableState<Channels> {
                     ],
                   ),
                 ),
+              CategoriesDialog(
+                  categoriesScrollController: _categoriesScrollController,
+                  visibile: _visibile_categories_dialog,
+                  categoriesList: categories,
+                  focused_category: _focused_category,
+                  selected_category: _selected_category,
+                  close: closCategoriesDialog,
+                  select: selectCategory),
+              CountriesDialog(
+                  countriesScrollController: _countriesScrollController,
+                  visibile: _visibile_countries_dialog,
+                  countriesList: countries,
+                  focused_country: _focused_country,
+                  selected_country: _selected_country,
+                  close: closCountriesDialog,
+                  select: selectCountry),
             ],
           ),
         ),
@@ -774,19 +1093,14 @@ class _ChannelsState extends ResumableState<Channels> {
 
   void _goToChannelDetail() {
     if (posty >= 0) {
-      if (onClickCount == 1) {
-        onClickCount = 2;
-        _setupDataSource();
-      } else if (onClickCount == 2) {
-        onClickCount = 1;
-        _betterPlayerController.pause();
-        Player.playTrailer(
-            context,
-            channles[_focused_channel].m3U8Source.url,
-            channles[_focused_channel].title,
-            channles[_focused_channel].description,
-        isLiveTv: true);
-      }
+      push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation1, animation2) =>
+              ChannelDetail(channel: channles[_focused_channel]),
+          transitionDuration: Duration(seconds: 0),
+        ),
+      );
       FocusScope.of(context).requestFocus(null);
     }
   }
@@ -859,20 +1173,19 @@ class _ChannelsState extends ResumableState<Channels> {
                       setState(() {
                         posty = jndex;
                         postx = index;
-                        // Future.delayed(Duration(milliseconds: 250), () {
-                        //   Navigator.push(
-                        //     context,
-                        //     PageRouteBuilder(
-                        //       pageBuilder: (context, animation1, animation2) =>
-                        //           ChannelDetail(
-                        //               channel: channles[
-                        //                   (jndex * _channels_element_by_line) +
-                        //                       index]),
-                        //       transitionDuration: Duration(seconds: 0),
-                        //     ),
-                        //   );
-                        // });
-                        _goToChannelDetail();
+                        Future.delayed(Duration(milliseconds: 250), () {
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              pageBuilder: (context, animation1, animation2) =>
+                                  ChannelDetail(
+                                      channel: channles[
+                                          (jndex * _channels_element_by_line) +
+                                              index]),
+                              transitionDuration: Duration(seconds: 0),
+                            ),
+                          );
+                        });
                       });
                     },
                     child: ChannelWidget(

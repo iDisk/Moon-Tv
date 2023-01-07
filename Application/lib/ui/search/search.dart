@@ -13,6 +13,7 @@ import 'package:flutter_app_tv/ui/home/home_loading_widget.dart';
 import 'package:flutter_app_tv/ui/movie/movie.dart';
 import 'package:flutter_app_tv/ui/movie/movie_short_detail.dart';
 import 'package:flutter_app_tv/ui/movie/movies_widget.dart';
+import 'package:flutter_app_tv/ui/player/Player.dart';
 import 'package:flutter_app_tv/ui/serie/serie.dart';
 import 'package:flutter_app_tv/widget/navigation_widget.dart';
 import 'package:image_fade/image_fade.dart';
@@ -94,8 +95,15 @@ class _SearchState extends State<Search> {
         if (jsonData["channels"] != null) {
           for (Map channel_map in jsonData["channels"]) {
             Channel channel = Channel.fromJson(channel_map);
-            channels.add(channel);
-            selected_channel = channel;
+
+            var source = channel.sources.firstWhere(
+                (element) => element.type == "m3u8",
+                orElse: () => null);
+            if (source != null) {
+              channel.m3U8Source = source;
+              channels.add(channel);
+              selected_channel = channel;
+            }
           }
           if (channels.length > 0) {
             ItemScrollController controller = new ItemScrollController();
@@ -693,14 +701,17 @@ class _SearchState extends State<Search> {
   void _goToChannelDetail() {
     if (channels.isEmpty) return;
     if (posty == 0) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation1, animation2) =>
-              ChannelDetail(channel: channels[postx]),
-          transitionDuration: Duration(seconds: 0),
-        ),
-      );
+      // Navigator.push(
+      //   context,
+      //   PageRouteBuilder(
+      //     pageBuilder: (context, animation1, animation2) =>
+      //         ChannelDetail(channel: channels[postx]),
+      //     transitionDuration: Duration(seconds: 0),
+      //   ),
+      // );
+      Player.playTrailer(context, channels[postx].m3U8Source.url,
+          channels[postx].title, channels[postx].description,
+          isLiveTv: true);
       FocusScope.of(context).requestFocus(null);
     }
   }

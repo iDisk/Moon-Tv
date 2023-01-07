@@ -47,6 +47,7 @@ class MainActivity : FlutterActivity() {
                 val resume = call.argument<Boolean>("resume")
                 val description = call.argument<Any>("description")
                 val isTrailer = call.argument<Boolean>("isTrailer")
+                val isLiveTv = call.argument<Boolean>("isLiveTv")
                 intent.putExtra("url", "$url")
                 intent.putExtra("title", "$title")
                 intent.putExtra("id", "$id")
@@ -54,6 +55,7 @@ class MainActivity : FlutterActivity() {
                 intent.putExtra("resume", resume)
                 intent.putExtra("description", "$description")
                 intent.putExtra("isTrailer", isTrailer)
+                intent.putExtra("isLiveTv", isLiveTv)
                 startActivity(intent)
 
                 result.success(true)
