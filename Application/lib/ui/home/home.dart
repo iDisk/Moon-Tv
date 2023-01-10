@@ -91,7 +91,7 @@ class _HomeState extends ResumableState<Home> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     logged = await prefs.getBool("LOGGED_USER");
-
+/*Ejemplo*/
     if (logged == true) {
       image = Image.network(await prefs.getString("IMAGE_USER"));
     } else {
