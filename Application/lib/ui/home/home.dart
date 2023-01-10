@@ -20,6 +20,7 @@ import 'package:flutter_app_tv/ui/home/home_loading_widget.dart';
 import 'package:flutter_app_tv/ui/home/mylist.dart';
 import 'package:flutter_app_tv/ui/movie/movie.dart';
 import 'package:flutter_app_tv/ui/movie/movies.dart' as mmm;
+import 'package:flutter_app_tv/ui/player/Player.dart';
 import 'package:flutter_app_tv/ui/search/search.dart';
 import 'package:flutter_app_tv/ui/serie/serie.dart';
 import 'package:flutter_app_tv/ui/serie/series.dart';
@@ -160,7 +161,14 @@ class _HomeState extends ResumableState<Home> {
         if (jsonData["channels"] != null) {
           for (Map channel_map in jsonData["channels"]) {
             model.Channel channel = model.Channel.fromJson(channel_map);
-            channels.add(channel);
+
+            var source = channel.sources.firstWhere(
+                    (element) => element.type == "m3u8",
+                orElse: () => null);
+            if (source != null) {
+              channel.m3U8Source = source;
+              channels.add(channel);
+            }
           }
           if (channels.length > 0) {
             ItemScrollController controller = new ItemScrollController();
@@ -611,14 +619,21 @@ class _HomeState extends ResumableState<Home> {
 
   void _goToChannelDetail() {
     if (posty == 0 && channels.length > 0) {
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation1, animation2) =>
-              ChannelDetail(channel: channels[postx]),
-          transitionDuration: Duration(seconds: 0),
-        ),
-      );
+      // Navigator.push(
+      //   context,
+      //   PageRouteBuilder(
+      //     pageBuilder: (context, animation1, animation2) =>
+      //         ChannelDetail(channel: channels[postx]),
+      //     transitionDuration: Duration(seconds: 0),
+      //   ),
+      // );
+
+      Player.playTrailer(
+          context,
+          channels[postx].m3U8Source.url,
+          channels[postx].title,
+          channels[postx].description,
+          isLiveTv: true);
       FocusScope.of(context).requestFocus(null);
     }
   }

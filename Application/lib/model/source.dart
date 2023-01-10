@@ -27,7 +27,7 @@ class Source {
         type: parsedJson['type'],
         quality: parsedJson['quality'],
         size: parsedJson['size'],
-        premium: parsedJson['premium'],
+        premium: "${parsedJson['premium']}",
         external: parsedJson['external'],
         url: parsedJson['url']);
   }

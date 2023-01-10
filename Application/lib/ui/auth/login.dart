@@ -43,7 +43,8 @@ class _LoginState extends State<Login> {
   FocusScope.of(context).requestFocus(username_focus_node);
   });
 }
-  Future<String>  _login(String email,String password) async{
+
+  Future<String> _login(String email,String password) async {
     setState(() {
       loading = true;
       _visibile_error = false;
@@ -174,6 +175,7 @@ class _LoginState extends State<Login> {
       loading = false;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -527,6 +529,7 @@ class _LoginState extends State<Login> {
       }
     }
   }
+
   bool checkEmail(String email){
     if(email.length<6)
       return false;

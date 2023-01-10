@@ -155,8 +155,8 @@ class _VideoPlayerState extends State<VideoPlayer>
       const platform = MethodChannel('VIDEO_PLAYER_CHANNEL');
       var result = await platform.invokeMethod('launchVideoPlayer', {
         'url': widget.sourcesList[widget.selected_source].url,
-        'title': widget.poster.title,
-        'description': widget.poster.description,
+        'title': widget?.poster?.title??"",
+        'description': widget?.poster?.description??"",
       });
 
       await Future.delayed(Duration(seconds: 3));

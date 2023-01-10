@@ -10,7 +10,13 @@ import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.source.ConcatenatingMediaSource
+import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.ui.SubtitleView
+import com.google.android.exoplayer2.upstream.DataSource
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import com.google.android.exoplayer2.util.Util
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.moontv.application.R
 
@@ -63,7 +69,16 @@ class TrailerFragment : VideoSupportFragment(), OnChangeSubtitleListener {
             val uri = Uri.parse(activity?.intent?.getStringExtra("url"))
             val mediaItem: MediaItem.Builder = MediaItem.Builder().setUri(uri)
 
-            player.setMediaItem(mediaItem.build())
+
+            if (activity?.intent?.getBooleanExtra("isLiveTv", false) == true) {
+                val dataSourceFactory: DataSource.Factory = DefaultHttpDataSource.Factory()
+                val hlsMediaSource = HlsMediaSource.Factory(dataSourceFactory)
+                    .setAllowChunklessPreparation(true)
+                    .createMediaSource(mediaItem.build())
+                player.addMediaSource(hlsMediaSource)
+            } else
+                player.setMediaItem(mediaItem.build())
+
             player.prepare()
             player.play()
             addPlayerListeners()
@@ -110,9 +125,10 @@ class TrailerFragment : VideoSupportFragment(), OnChangeSubtitleListener {
                 super.onPlayerError(error)
                 FirebaseCrashlytics.getInstance().recordException(
                     Exception(
-                    "URL = ${activity?.intent?.getStringExtra("url")}," +
-                            "ID = ${activity?.intent?.getStringExtra("id")}" +
-                            "Error = ${error.stackTrace}")
+                        "URL = ${activity?.intent?.getStringExtra("url")}," +
+                                "ID = ${activity?.intent?.getStringExtra("id")}" +
+                                "Error = ${error.stackTrace}"
+                    )
                 )
             }
 
@@ -120,13 +136,15 @@ class TrailerFragment : VideoSupportFragment(), OnChangeSubtitleListener {
                 super.onPlayerErrorChanged(error)
                 FirebaseCrashlytics.getInstance().recordException(
                     Exception(
-                    "URL = ${activity?.intent?.getStringExtra("url")}," +
-                            "ID = ${activity?.intent?.getStringExtra("id")}" +
-                            "Error = ${error?.stackTrace}")
+                        "URL = ${activity?.intent?.getStringExtra("url")}," +
+                                "ID = ${activity?.intent?.getStringExtra("id")}" +
+                                "Error = ${error?.stackTrace}"
+                    )
                 )
             }
         })
     }
+
     override fun onChangeSubTitle(enable: Boolean, otherAction: Boolean, pos: Int) {}
 }
 

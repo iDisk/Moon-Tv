@@ -23,8 +23,9 @@ class Player {
   }
 
   //play trailer
-  static playTrailer(BuildContext context, String url, String title,
-      String description) async {
+  static playTrailer(
+      BuildContext context, String url, String title, String description,
+      {bool isLiveTv = false}) async {
     print("trailer played Url == $url");
     RegExp reg = RegExp(
         r'http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?');
@@ -36,7 +37,7 @@ class Player {
         throw 'Could not launch $url';
       }
     } else {
-      Player.openPlayer(context, 0, url, title, description, false, false,
+      Player.openPlayer(context, 0, url, title, description, isLiveTv, false,
           isTrailer: true);
     }
   }
@@ -51,7 +52,7 @@ class Player {
       String description,
       List<Season> seasons,
       String response,
-      episodeId:int}) async {
+      episodeId: int}) async {
     showProgress(context);
     var subTitleList = await getSubtitlesList(episodeId, false);
     Navigator.pop(context);
@@ -205,6 +206,7 @@ class Player {
       'description': description,
       'resume': resume,
       'isTrailer': isTrailer,
+      'isLiveTv': liveTV,
       // 'subTitle': subTitleList.length > 0 ? subTitleList?.first?.url : ""
       'subTitle': convertToJson(subTitleList)
     });

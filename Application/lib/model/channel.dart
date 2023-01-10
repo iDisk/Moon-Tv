@@ -25,6 +25,7 @@ class Channel{
   List<Category> categories;
   List<Country> countries;
   List<Source> sources;
+  Source m3U8Source;
 
 
   Channel({
