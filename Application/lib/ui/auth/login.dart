@@ -12,6 +12,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_fade/image_fade.dart';
+import 'package:flutter_app_tv/ui/home/home.dart';
 import 'dart:convert' as convert;
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -58,6 +59,7 @@ class _LoginState extends State<Login> {
         var jsonData = convert.jsonDecode(response.body);
         if(jsonData["code"] == 200){
           int id_user=0;
+          String days_user="0";
           String name_user="x";
           String username_user="x";
           String email_user="";
@@ -77,6 +79,9 @@ class _LoginState extends State<Login> {
             }
             if(i["name"] == "id") {
               id_user = i["value"];
+            }
+            if(i["name"] == "days") {
+              days_user = i["value"];
             }
             if(i["name"] == "name") {
               name_user = i["value"];
@@ -105,6 +110,7 @@ class _LoginState extends State<Login> {
             SharedPreferences prefs = await SharedPreferences.getInstance();
 
             prefs.setInt("ID_USER", id_user);
+            prefs.setString("DAYS_USER", days_user);
             prefs.setString("SALT_USER", salt_user);
             prefs.setString("TOKEN_USER", token_user);
             prefs.setString("NAME_USER", name_user);
@@ -123,7 +129,14 @@ class _LoginState extends State<Login> {
             );
             _visibile_error = false;
 
-            Navigator.pop(context);
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation1, animation2) => Home(),
+                transitionDuration: Duration(seconds: 0),
+              ),
+            );
+            //Navigator.pop(context);
           }else{
             _message_error = jsonData["message"];
             _visibile_error = true;

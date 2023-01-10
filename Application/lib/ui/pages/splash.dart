@@ -6,12 +6,13 @@ import 'package:flutter_app_tv/api/api_rest.dart';
 import 'dart:math';
 
 import 'package:flutter_app_tv/ui/home/home.dart';
+import 'package:flutter_app_tv/ui/auth/login.dart';
 import 'package:flutter_app_tv/ui/home/mylist.dart';
 import 'package:flutter_app_tv/widget/AudioUtil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert' as convert;
-
+String finalEmail;
 class Splash extends StatefulWidget {
   @override
   _SplashState createState() => _SplashState();
@@ -31,6 +32,16 @@ class _SplashState extends State<Splash> with TickerProviderStateMixin {
   bool _p_11 = false;
   bool _p_12 = false;
   bool can_redirect = false;
+
+  Future getValidationData() async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var obtainedEmail = prefs.getString("EMAIL_USER");
+
+    setState(() {
+      finalEmail = obtainedEmail;
+    });
+    print(finalEmail);
+  }
 
   @override
   void initState() {
@@ -138,13 +149,24 @@ class _SplashState extends State<Splash> with TickerProviderStateMixin {
 
   redirect() {
     if (can_redirect) {
+      /*
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation1, animation2) => Home(),
           transitionDuration: Duration(seconds: 0),
         ),
-      );
+      );*/
+
+      getValidationData().whenComplete(() async{
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation1, animation2) => finalEmail==null ? Login():Home() ,
+            transitionDuration: Duration(seconds: 0),
+          ),
+        );
+      });
     } else {
       can_redirect = true;
     }
@@ -320,7 +342,7 @@ class _SplashState extends State<Splash> with TickerProviderStateMixin {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "Free Movies \nTV Series and \nTV channels",
+                                          "Movies \nTV Series and \nTV channels",
                                           style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 30,

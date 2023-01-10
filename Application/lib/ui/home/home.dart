@@ -100,6 +100,44 @@ class _HomeState extends ResumableState<Home> {
     setState(() {
       print(logged);
     });
+
+    SharedPreferences prefs2 = await SharedPreferences.getInstance();
+    /*Codigo para extraer los dias*/
+    /*
+    var response;
+
+    int id_user = 0;
+    if (prefs.getBool("LOGGED_USER") == true) {
+      id_user = prefs.getInt("ID_USER");
+    }
+    var body =  {'username':email, 'password': password};
+
+    response = await apiRest.loginUser( body);
+
+    if (response != null) {
+      if (response.statusCode == 200) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        var jsonData = convert.jsonDecode(response.body);
+        String days_user="0";
+        for (Map i in jsonData["values"]) {
+          print(i["name"]);
+          print(i["value"]);
+          if (i["name"] == "days") {
+            days_user = i["value"];
+
+          }
+        }
+        prefs.setString("DAYS_USER", days_user);
+
+      }
+    }*/
+    /*Fin del codigo extraer dias*/
+    Fluttertoast.showToast(
+      msg: prefs2.getString("DAYS_USER")+' days left',
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+    );
   }
 
   void _getList() async {

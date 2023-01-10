@@ -12,6 +12,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_fade/image_fade.dart';
 import 'package:need_resume/need_resume.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_app_tv/ui/auth/login.dart';
 
 class Profile extends StatefulWidget {
   @override
@@ -321,6 +322,7 @@ class _ProfileState extends ResumableState<Profile> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     prefs.remove("ID_USER");
+    prefs.remove("DAYS_USER");
     prefs.remove("SALT_USER");
     prefs.remove("TOKEN_USER");
     prefs.remove("NAME_USER");
@@ -338,7 +340,15 @@ class _ProfileState extends ResumableState<Profile> {
       backgroundColor: Colors.green,
       textColor: Colors.white,
     );
-    Navigator.pop(context);
+    //Navigator.pop(context);
+
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation1, animation2) => Login(),
+        transitionDuration: Duration(seconds: 0),
+      ),
+    );
   }
 
   void _showInfos() {

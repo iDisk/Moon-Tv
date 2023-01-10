@@ -306,8 +306,8 @@ class _ResumeDiaLogState extends State<ResumeDiaLog> {
                 SizedBox(
                   height: 10,
                 ),
-                Text("Reanudar Donde Se Quedo?",
-                    // Text("Desea reanudar la transmision a ${widget.time} mins?",
+                //Text("Reanudar Donde Se Quedo?",
+                     Text("Desea reanudar la transmision a ${widget.time} mins?",
                     style: TextStyle(color: Colors.white, fontSize: 20)),
                 SizedBox(
                   height: 30,
