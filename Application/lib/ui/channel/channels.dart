@@ -25,6 +25,7 @@ import 'package:flutter_app_tv/ui/movie/movie_short_detail.dart';
 import 'package:flutter_app_tv/ui/movie/movie_widget.dart';
 import 'package:flutter_app_tv/ui/movie/movies.dart';
 import 'package:flutter_app_tv/ui/player/Player.dart';
+import 'package:flutter_app_tv/ui/player/native_player_view.dart';
 import 'package:flutter_app_tv/ui/search/search.dart';
 import 'package:flutter_app_tv/ui/serie/series.dart';
 import 'package:flutter_app_tv/ui/setting/settings.dart';
@@ -38,6 +39,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'dart:convert' as convert;
 import 'package:need_resume/need_resume.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_player/video_player.dart';
 
 /// A [StatelessWidget] which demonstrates
 /// how to consume and interact with a [CounterBloc].
@@ -96,8 +98,9 @@ class _ChannelsState extends ResumableState<Channels> {
   bool logged;
   Image image = Image.asset("assets/images/profile.jpg");
   BetterPlayerController _betterPlayerController;
-
+  VideoPlayerController _controller;
   int onClickCount = 1;
+  String url;
 
   @override
   void initState() {
@@ -108,41 +111,52 @@ class _ChannelsState extends ResumableState<Channels> {
       _getList();
       getLogged();
     });
-    initPlayer();
+  }
+
+  @override
+  void dispose() {
+    if (_controller != null) {
+      _controller.dispose();
+    }
+
+    super.dispose();
   }
 
   void initPlayer() {
-    _betterPlayerController = BetterPlayerController(
-      const BetterPlayerConfiguration(
-        autoPlay: true,
-        fit: BoxFit.fill,
-        allowedScreenSleep: false,
-        autoDispose: true,
-        expandToFill: true,
-        looping: true,
-        aspectRatio: 16 / 9,
-        controlsConfiguration: BetterPlayerControlsConfiguration(
-          enableOverflowMenu: false,
-          showControlsOnInitialize: false,
-          enableRetry: true,
-          showControls: false,
-        ),
-      ),
-    );
+    _controller = VideoPlayerController.network(url,
+        formatHint: VideoFormat.hls,
+        videoPlayerOptions: VideoPlayerOptions(
+            allowBackgroundPlayback: false, mixWithOthers: false));
   }
 
   void _setupDataSource() async {
-    print("My List ==> ${channles[_focused_channel].m3U8Source.url}");
-    BetterPlayerDataSource dataSource = BetterPlayerDataSource(
-        BetterPlayerDataSourceType.network,
-        channles[_focused_channel].m3U8Source.url,
-        // "https://moctobpltc-i.akamaihd.net/hls/live/571329/eight/playlist.m3u8",
-        // "http://137.184.38.122:80/play/RMJY86lyeSb1j4cLl0Ylj9tGNR0ucnfjASpLPK0pkAI/m3u8",
-        // "http://137.184.38.122:80/play/RMJY86lyeSb1j4cLl0Ylj9tGNR0ucnfjASpLPK0pkAI/m3u8",
-        videoFormat: BetterPlayerVideoFormat.hls,
-        liveStream: true);
-    _betterPlayerController.setupDataSource(dataSource);
-    _betterPlayerController.play();
+    print('-==--=-=-=-=-=-=-=-=-=-=-===-=');
+    if (_controller != null) {
+      _controller.dispose();
+    }
+
+    _controller =
+        VideoPlayerController.network(channles[_focused_channel].m3U8Source.url,
+            formatHint: VideoFormat.hls,
+            videoPlayerOptions: VideoPlayerOptions(
+              allowBackgroundPlayback: false,
+              mixWithOthers: true,
+            ));
+    _controller.initialize();
+    setState(() {
+      _controller.play();
+    });
+    // print("My List ==> ${channles[_focused_channel].m3U8Source.url}");
+    // BetterPlayerDataSource dataSource = BetterPlayerDataSource(
+    //     BetterPlayerDataSourceType.network,
+    //     channles[_focused_channel].m3U8Source.url,
+    //     // "https://moctobpltc-i.akamaihd.net/hls/live/571329/eight/playlist.m3u8",
+    //     // "http://137.184.38.122:80/play/RMJY86lyeSb1j4cLl0Ylj9tGNR0ucnfjASpLPK0pkAI/m3u8",
+    //     // "http://137.184.38.122:80/play/RMJY86lyeSb1j4cLl0Ylj9tGNR0ucnfjASpLPK0pkAI/m3u8",
+    //     videoFormat: BetterPlayerVideoFormat.hls,
+    //     liveStream: true);
+    // _betterPlayerController.setupDataSource(dataSource);
+    // _betterPlayerController.play();
   }
 
   @override
@@ -150,9 +164,7 @@ class _ChannelsState extends ResumableState<Channels> {
     // TODO: implement onResume
     super.onResume();
     getLogged();
-    if(_betterPlayerController != null){
-
-    }
+    if (_betterPlayerController != null) {}
   }
 
   Future<String> getLogged() async {
@@ -195,6 +207,14 @@ class _ChannelsState extends ResumableState<Channels> {
         }
         _showData();
         page++;
+
+        if (channles.isNotEmpty) {
+          setState(() {
+            posty = 0;
+            postx = 0;
+            _setupDataSource();
+          });
+        }
       } else {
         _showTryAgain();
       }
@@ -217,17 +237,14 @@ class _ChannelsState extends ResumableState<Channels> {
 
   void _loadMore() async {
     var response = await apiRest.getChannelsByFiltres(
-        0,
-        0,
-        order[selected_sort - 1],
-        page);
+        0, 0, order[selected_sort - 1], page);
     if (response != null) {
       if (response.statusCode == 200) {
         var jsonData = convert.jsonDecode(response.body);
         for (Map i in jsonData) {
           Channel poster = Channel.fromJson(i);
           var source = poster.sources.firstWhere(
-                  (element) => element.type == "m3u8",
+              (element) => element.type == "m3u8",
               orElse: () => null);
           if (source != null) {
             poster.m3U8Source = source;
@@ -284,6 +301,7 @@ class _ChannelsState extends ResumableState<Channels> {
                   rawKeyDownEvent.data;
               switch (rawKeyEventDataAndroid.keyCode) {
                 case KEY_CENTER:
+                  print("x = ${postx} y = $posty");
                   _selectFilter();
                   _goToSearch();
                   _goToHome();
@@ -296,7 +314,7 @@ class _ChannelsState extends ResumableState<Channels> {
                   _tryAgain();
                   break;
                 case KEY_UP:
-                  onClickCount =1;
+                  onClickCount = 1;
                   if (_visibile_loading) {
                     print("playing sound ");
                     break;
@@ -338,7 +356,7 @@ class _ChannelsState extends ResumableState<Channels> {
                   }
                   break;
                 case KEY_DOWN:
-                  onClickCount =1;
+                  onClickCount = 1;
                   if (_visibile_error) {
                     if (posty < -1)
                       posty++;
@@ -386,7 +404,7 @@ class _ChannelsState extends ResumableState<Channels> {
                   }
                   break;
                 case KEY_LEFT:
-                  onClickCount =1;
+                  onClickCount = 1;
                   if (_visibile_categories_dialog ||
                       _visibile_countries_dialog) {
                     print("playing sound ");
@@ -421,7 +439,7 @@ class _ChannelsState extends ResumableState<Channels> {
                   }
                   break;
                 case KEY_RIGHT:
-                  onClickCount =1;
+                  onClickCount = 1;
                   if (_visibile_categories_dialog ||
                       _visibile_countries_dialog) {
                     print("playing sound ");
@@ -532,21 +550,23 @@ class _ChannelsState extends ResumableState<Channels> {
                       ],
                     ))),
               ),
-              if (_betterPlayerController != null)
+              if (_controller != null)
                 Positioned(
                     right: 0,
                     top: 0,
                     left: MediaQuery.of(context).size.width / 2,
                     bottom: MediaQuery.of(context).size.height / 2,
-                    child: Container(
+                    child: SizedBox(
                       width: MediaQuery.of(context).size.width / 3,
                       height: MediaQuery.of(context).size.height / 2,
-                      color: Colors.red,
-                      child: AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child: BetterPlayer(
-                            controller: _betterPlayerController,
-                          )),
+                      child: VideoPlayer(
+                        _controller,
+                        key: UniqueKey(),
+                      ),
+                      // child: NativePlayerView(channles[_focused_channel]?.m3U8Source?.url?? ""),
+                      // child: BetterPlayer(
+                      //   controller: _betterPlayerController,
+                      // )
                     )),
               NavigationWidget(
                   postx: postx,
@@ -779,13 +799,14 @@ class _ChannelsState extends ResumableState<Channels> {
         _setupDataSource();
       } else if (onClickCount == 2) {
         onClickCount = 1;
-        _betterPlayerController.pause();
+        // _betterPlayerController.pause();
+        _controller.pause();
         Player.playTrailer(
             context,
             channles[_focused_channel].m3U8Source.url,
             channles[_focused_channel].title,
             channles[_focused_channel].description,
-        isLiveTv: true);
+            isLiveTv: true);
       }
       FocusScope.of(context).requestFocus(null);
     }

@@ -26,7 +26,6 @@ class PrefUtils {
 
     }
 
-    constructor()
     constructor(context: Context) {
         preferences = context.getSharedPreferences("hrone_app_config", Context.MODE_PRIVATE)
         editor = preferences.edit()

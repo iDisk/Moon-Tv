@@ -10,6 +10,7 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.moontv.application.ext.convertToListObject
 import com.moontv.application.model.Season
 import com.moontv.application.model.SeasonItem
+import com.moontv.application.native_view.NativeViewFactory
 import com.moontv.application.utils.PrefUtils
 import com.smsolutions.tv.ui.PlaybackActivity
 import io.flutter.embedding.android.FlutterActivity
@@ -31,8 +32,14 @@ class MainActivity : FlutterActivity() {
 
     private var playerLaunchedTimeStamp = 0L
 
+
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        flutterEngine
+            .platformViewsController
+            .registry
+            .registerViewFactory("player_view", NativeViewFactory())
+
         prefUtils = PrefUtils.with(context)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
             // This method is invoked on the main thread.
