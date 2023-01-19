@@ -20,9 +20,14 @@ import com.google.android.exoplayer2.ui.SubtitleView
 import com.google.android.exoplayer2.util.MimeTypes
 import com.google.common.collect.ImmutableList
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.moontv.application.MoonTvApp
 import com.moontv.application.R
+import com.moontv.application.model.MoonTvMediaItem
 import com.moontv.application.model.SubTitle
 import com.moontv.application.player.adapter.ChooseSubtitleAdapter
+import com.moontv.application.roomdb.MediaItemRepository
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 
 
@@ -35,11 +40,15 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
     private lateinit var player: ExoPlayer
     private var finish = false
     private var subTitle = ""
+    private var movieTitle = ""
+    private var description = ""
+    private var url = ""
+    private var poster = ""
 
     private val mHandler = Handler()
     private var subTitles = mutableListOf<SubTitle>()
     private var selectedItem = 0
-
+    private var repository: MediaItemRepository? = null
 
     private var mRunnable: Runnable = Runnable {
         mTransportControlGlue.host.hideControlsOverlay(true)
@@ -48,10 +57,13 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
     private val chooseSubtitleAdapter by lazy { ChooseSubtitleAdapter(context, subTitles, this) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        repository = (activity?.application as MoonTvApp).repository
         activity?.apply {
-
             subTitle = activity?.intent?.getStringExtra("subTitle").orEmpty()
+            movieTitle = activity?.intent?.getStringExtra("title").orEmpty()
+            description = activity?.intent?.getStringExtra("description").orEmpty()
+            url = activity?.intent?.getStringExtra("url").orEmpty()
+            poster = activity?.intent?.getStringExtra("poster").orEmpty()
             encodeSubTitle()
 
             player = ExoPlayer.Builder(requireActivity()).build()
@@ -85,7 +97,7 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
             mTransportControlGlue.subtitle = activity?.intent?.getStringExtra("description")
 
 
-            val uri = Uri.parse(activity?.intent?.getStringExtra("url"))
+            val uri = Uri.parse(url)
             val mediaItem: MediaItem.Builder = MediaItem.Builder().setUri(uri)
 
             if (subTitle.isNotEmpty()) {
@@ -136,9 +148,14 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
         super.onPause()
         mHandler.removeCallbacks(mRunnable)
         mTransportControlGlue.pause()
+        val bufferedPosition = player.bufferedPosition
+
         if (!finish) {
-            saveCurrentTime(if (player.bufferedPercentage >= 98) 0L else player.currentPosition)
-        } else saveCurrentTime(0)
+            saveCurrentTime(
+                if (player.bufferedPercentage >= 98) 0L else player.currentPosition,
+                player.duration
+            )
+        } else saveCurrentTime(0, player.duration)
 
     }
 
@@ -164,7 +181,7 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
                 when (playbackState) {
 
                     Player.STATE_ENDED -> {
-                        saveCurrentTime(0)
+                        GlobalScope.launch { saveCurrentTime(0, 0) }
                         finish = true
                         player.release()
                         activity?.finish()
@@ -176,9 +193,10 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
                 super.onPlayerError(error)
                 FirebaseCrashlytics.getInstance().recordException(
                     Exception(
-                    "URL = ${activity?.intent?.getStringExtra("url")}," +
-                            "ID = ${activity?.intent?.getStringExtra("id")}" +
-                            "Error = ${error.stackTrace}")
+                        "URL = ${activity?.intent?.getStringExtra("url")}," +
+                                "ID = ${activity?.intent?.getStringExtra("id")}" +
+                                "Error = ${error.stackTrace}"
+                    )
                 )
             }
 
@@ -186,9 +204,10 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
                 super.onPlayerErrorChanged(error)
                 FirebaseCrashlytics.getInstance().recordException(
                     Exception(
-                    "URL = ${activity?.intent?.getStringExtra("url")}," +
-                            "ID = ${activity?.intent?.getStringExtra("id")}" +
-                            "Error = ${error?.stackTrace}")
+                        "URL = ${activity?.intent?.getStringExtra("url")}," +
+                                "ID = ${activity?.intent?.getStringExtra("id")}" +
+                                "Error = ${error?.stackTrace}"
+                    )
                 )
             }
         })
@@ -205,14 +224,36 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
         return time
     }
 
-    fun saveCurrentTime(l: Long) {
+    fun saveCurrentTime(l: Long, totalTime: Long) {
+        val id: Int = activity?.intent?.getStringExtra("id")?.toIntOrNull() ?: 0
         context?.let { context ->
             val sharedPreferences =
                 context.getSharedPreferences("hrone_app_config", Context.MODE_PRIVATE)
-            sharedPreferences.edit().putLong("trackID${activity?.intent?.getStringExtra("id")}", l)
+            sharedPreferences.edit().putLong("trackID${id}", l)
                 .apply()
             Log.d("TAG", "saveCurrentTime: ${l}")
         }
+
+        GlobalScope.launch {
+            repository?.deleteMedia(id)
+            if (l != 0L) {
+                repository?.insert(
+                    MoonTvMediaItem(
+                        id = id,
+                        url = url,
+                        poster = poster,
+                        title = movieTitle,
+                        subTitle = description,
+                        isMovie = true,
+                        response = "",
+                        date = System.currentTimeMillis(),
+                        currentTime = l,
+                        totalTime = totalTime
+                    )
+                )
+            }
+        }
+
     }
 
     override fun onChangeSubTitle(enable: Boolean, otherAction: Boolean, pos: Int) {
@@ -285,13 +326,11 @@ class EPGVideoFragment : VideoSupportFragment(), OnChangeSubtitleListener {
         isControlsOverlayAutoHideEnabled = true
 
         playerAdapter.setRepeatAction(PlaybackControlsRow.RepeatAction.INDEX_NONE)
+        mTransportControlGlue.title = movieTitle
+        mTransportControlGlue.subtitle = description
 
 
-        mTransportControlGlue.title = activity?.intent?.getStringExtra("title")
-        mTransportControlGlue.subtitle = activity?.intent?.getStringExtra("description")
-
-
-        val uri = Uri.parse(activity?.intent?.getStringExtra("url"))
+        val uri = Uri.parse(url)
         val mediaItem: MediaItem.Builder = MediaItem.Builder().setUri(uri)
 
         val subtitle: MediaItem.SubtitleConfiguration =

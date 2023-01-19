@@ -162,7 +162,7 @@ class _SplashState extends State<Splash> with TickerProviderStateMixin {
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation1, animation2) => finalEmail==null ? Login():Home() ,
+            pageBuilder: (context, animation1, animation2) => finalEmail==null ? Home():Home() ,
             transitionDuration: Duration(seconds: 0),
           ),
         );

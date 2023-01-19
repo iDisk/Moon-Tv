@@ -795,7 +795,7 @@ class _VideoPlayerState extends State<VideoPlayer>
 
 
       Player.openPlayer(context,widget.poster.id, _sources[_new_selected_source].url,
-          widget.poster.title, widget.poster.description, false, true);
+          widget.poster.title, widget.poster.description, false, true,"");
       // Navigator.pushReplacement(
       //   context,
       //   PageRouteBuilder(

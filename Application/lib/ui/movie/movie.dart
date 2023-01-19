@@ -1277,7 +1277,7 @@ class _MovieState extends State<Movie> {
           widget.movie.title,
           widget.movie.description,
           false,
-          true);
+          true,widget.movie.image);
       // Navigator.push(
       //   context,
       //   PageRouteBuilder(

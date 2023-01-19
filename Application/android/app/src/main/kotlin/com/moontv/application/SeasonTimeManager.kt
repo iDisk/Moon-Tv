@@ -5,13 +5,18 @@ import android.content.Context
 import android.util.Log
 import com.moontv.application.ext.convertToListObject
 import com.moontv.application.model.Episode
+import com.moontv.application.model.MoonTvMediaItem
 import com.moontv.application.model.SeasonItem
+import com.moontv.application.roomdb.MediaItemRepository
 import com.moontv.application.utils.PrefUtils
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 /** this class use for handle season timing*/
 class SeasonTimeManager {
     companion object {
         private lateinit var seasons: List<SeasonItem>
+        var repository: MediaItemRepository? = null
         var indexOfSource = 0
         var indexOfEpisode = 0
         var indexOfSeason = 0
@@ -21,6 +26,7 @@ class SeasonTimeManager {
         private var singleton: SeasonTimeManager? = null
 
         fun with(context: Context): SeasonTimeManager {
+            repository = (context.applicationContext as MoonTvApp).repository
             prefUtils = PrefUtils.with(context)
             if (null == singleton)
                 singleton = SeasonTimeManager()
@@ -73,8 +79,28 @@ class SeasonTimeManager {
         seasons[indexOfSeason].episodes[indexOfEpisode]
 
     /** save the current episode time*/
-    fun save(time: Long) {
-        prefUtils.saveEpisodeTime(mainSeasonId, getCurrentSource().id, time)
+    fun save(time: Long, totalBufferedDuration: Long) {
+        GlobalScope.launch {
+            repository?.deleteMediaBySeason(mainSeasonId)
+            if (time != 0L)
+                repository?.insert(
+                    MoonTvMediaItem(
+                        id = getCurrentSource().id,
+                        mainId = mainSeasonId,
+                        currentTime = time,
+                        totalTime = totalBufferedDuration,
+                        date = System.currentTimeMillis(),
+                        response = "",
+                        isMovie = false,
+                        title = getTitle(),
+                        poster = getCurrentEpisode().image,
+                        url = getCurrentSource().url,
+                        episodeId = 0,
+                        subTitle = getDescription()
+                    )
+                )
+            prefUtils.saveEpisodeTime(mainSeasonId, getCurrentSource().id, time)
+        }
     }
 
     /** @param mainId = main id of the season
@@ -126,7 +152,7 @@ class SeasonTimeManager {
 
     /** play next Episode*/
     fun playNextEpisode() {
-        save(0L)
+        save(0L, 0L)
         if (hasNextEpisode())
             indexOfEpisode++
         else if (hasNextSeason()) {
@@ -134,6 +160,7 @@ class SeasonTimeManager {
             indexOfEpisode = 0
         }
     }
+
     /** @return current episode time*/
     fun getCurrentSourceTime(): Long {
         return prefUtils.getLastPlayedTimeOfEpisode(getCurrentSource().id)
@@ -141,7 +168,11 @@ class SeasonTimeManager {
 
     /** delete the season from shared preference*/
     fun deleteSeasonTiming() {
-        prefUtils.deleteSeasonTimingTime(mainSeasonId)
+        GlobalScope.launch {
+            repository?.deleteMediaBySeason(mainSeasonId)
+            prefUtils.deleteSeasonTimingTime(mainSeasonId)
+        }
+
     }
 
 }

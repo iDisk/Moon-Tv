@@ -37,8 +37,6 @@ import org.json.JSONArray
 
 class EpisodeFragment : VideoSupportFragment(), OnChangeSubtitleListener {
     lateinit var seasonTimeManager: SeasonTimeManager
-
-
     private lateinit var mTransportControlGlue: PlaybackTransportControlGlue<ExoLeanbackPlayerAdapter>
     private lateinit var player: ExoPlayer
     private var finish = false
@@ -51,7 +49,6 @@ class EpisodeFragment : VideoSupportFragment(), OnChangeSubtitleListener {
 
     private var nextEpisodeRunnable = Runnable {
         checkForNextEpisode()
-
     }
 
     private var isNextEpisodeDialogShowing = false
@@ -64,7 +61,6 @@ class EpisodeFragment : VideoSupportFragment(), OnChangeSubtitleListener {
                 if (seasonTimeManager.getNextEpisodeDetails() != null)
                     dialogNextEpisode()
             }
-
         }
         nextEpisodeHandler.postDelayed(nextEpisodeRunnable, 1000)
     }
@@ -182,18 +178,21 @@ class EpisodeFragment : VideoSupportFragment(), OnChangeSubtitleListener {
 
         //save episode time or move to the next episode and finish
         if (!finish) {
-            seasonTimeManager.save(if (player.bufferedPercentage >= 98) 0L else player.currentPosition)
+            seasonTimeManager.save(
+                if (player.bufferedPercentage >= 98) 0L else player.currentPosition,
+                player.duration
+            )
             if (player.bufferedPercentage >= 98) {
                 if (seasonTimeManager.getNextEpisodeDetails() != null) {
                     seasonTimeManager.playNextEpisode()
-                    seasonTimeManager.save(0)
+                    seasonTimeManager.save(0, player.duration)
                 }
             }
         } else {
             if (seasonTimeManager.getNextEpisodeDetails() == null) {
                 seasonTimeManager.deleteSeasonTiming()
             }
-            seasonTimeManager.save(0)
+            seasonTimeManager.save(0,player.duration)
         }
 
     }
@@ -223,7 +222,7 @@ class EpisodeFragment : VideoSupportFragment(), OnChangeSubtitleListener {
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                 when (playbackState) {
                     Player.STATE_ENDED -> {
-                        seasonTimeManager.save(0)
+                        seasonTimeManager.save(0, player.duration)
 
                         Log.d(
                             "TAG",

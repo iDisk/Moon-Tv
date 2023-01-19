@@ -7,6 +7,7 @@ import android.os.PersistableBundle
 import android.util.Log
 import androidx.annotation.NonNull
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.google.gson.Gson
 import com.moontv.application.ext.convertToListObject
 import com.moontv.application.model.Season
 import com.moontv.application.model.SeasonItem
@@ -16,6 +17,8 @@ import com.smsolutions.tv.ui.PlaybackActivity
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -55,6 +58,7 @@ class MainActivity : FlutterActivity() {
                 val description = call.argument<Any>("description")
                 val isTrailer = call.argument<Boolean>("isTrailer")
                 val isLiveTv = call.argument<Boolean>("isLiveTv")
+                val poster = call.argument<String>("poster")
                 intent.putExtra("url", "$url")
                 intent.putExtra("title", "$title")
                 intent.putExtra("id", "$id")
@@ -63,6 +67,7 @@ class MainActivity : FlutterActivity() {
                 intent.putExtra("description", "$description")
                 intent.putExtra("isTrailer", isTrailer)
                 intent.putExtra("isLiveTv", isLiveTv)
+                intent.putExtra("poster", poster)
                 startActivity(intent)
 
                 result.success(true)
@@ -86,6 +91,7 @@ class MainActivity : FlutterActivity() {
                 val resume = call.argument<Boolean>("resume")
                 val description = call.argument<String>("description")
                 val seasons = call.argument<String>("seasons")
+                val poster = call.argument<String>("poster")
 
                 intent.putExtra("title", "$title")
                 intent.putExtra("id", id)
@@ -95,8 +101,15 @@ class MainActivity : FlutterActivity() {
                 intent.putExtra("description", "$description")
                 intent.putExtra("isSeries", true)
                 intent.putExtra("seasons", seasons)
+                intent.putExtra("poster", poster)
                 startActivity(intent)
                 result.success(true)
+            } else if (call.method == "getLastPlayedMedias") {
+                GlobalScope.launch {
+                    val response = (application as MoonTvApp).repository.getAllMedia()
+
+                    result.success(Gson().toJson(response))
+                }
             }
         }
     }

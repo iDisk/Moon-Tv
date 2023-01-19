@@ -41,6 +41,7 @@
         android:required="false" />
 
     <application
+        android:name="MoonTvApp"
         android:banner="@drawable/banner"
         android:icon="@mipmap/ic_launcher"
         android:label="MoonTV"

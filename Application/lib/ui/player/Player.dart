@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_app_tv/api/api_rest.dart';
+import 'package:flutter_app_tv/model/Media.dart';
 import 'package:flutter_app_tv/model/season.dart';
 import 'dart:convert' as convert;
 import 'package:flutter_app_tv/model/subtitle.dart' as model;
@@ -22,6 +23,10 @@ class Player {
         .invokeMethod("getLastPlayedEpisodeDetail", {"id": id});
   }
 
+  static getLastPlayedMediaList() async {
+    return await platform.invokeMethod("getLastPlayedMedias", {});
+  }
+
   //play trailer
   static playTrailer(
       BuildContext context, String url, String title, String description,
@@ -37,10 +42,12 @@ class Player {
         throw 'Could not launch $url';
       }
     } else {
-      Player.openPlayer(context, 0, url, title, description, isLiveTv, false,
+      Player.openPlayer(
+          context, 0, url, title, description, isLiveTv, false, "",
           isTrailer: true);
     }
   }
+
 
   ///play episode
   static playEpisode(
@@ -59,6 +66,7 @@ class Player {
     platform.invokeMethod("playEpisodes", {
       "mainId": mainId,
       "id": id,
+      'episodeId': episodeId,
       "url": url,
       "title": title,
       "description": description,
@@ -68,11 +76,51 @@ class Player {
     });
   }
 
+  static continuePlaying(BuildContext context, Media media) async{
+    if (media.isMovie)
+      openPlayer(context, media.id, media.url, media.title, media.subTitle,
+          false, true, media.poster,
+          resume: false);
+    else {
+      showProgress(context);
+      List<Season> seasonsMain = [];
+      var response = await apiRest.getSeasonsBySerie(media.mainId);
+      if (response != null) {
+        if (response.statusCode == 200) {
+          var jsonData = convert.jsonDecode(response.body);
+          for (Map i in jsonData) {
+            Season season = Season.fromJson(i);
+            seasonsMain.add(season);
+          }
+          seasonsMain.asMap().forEach((sk, seasons) {
+            seasons.episodes.asMap().forEach((ek, episode) {
+              episode.sources.asMap().forEach((sok, source) {
+                if (media.id == source.id) {
+                  Navigator.pop(context);
+                  Player.playEpisode(
+                      context: context,
+                      id: source.id,
+                      response: response.body,
+                      seasons: seasonsMain,
+                      mainId: media.mainId,
+                      episodeId: episode.id
+                  );
+                }
+              });
+            });
+          });
+
+        }
+      }
+    }
+  }
+
   static openPlayer(BuildContext context, int id, String url, String title,
-      String description, bool liveTV, bool isMovie,
-      {bool isTrailer = false}) async {
+      String description, bool liveTV, bool isMovie, String poster,
+      {bool isTrailer = false, resume = true}) async {
     if (isTrailer) {
-      launchPlayer([], 0, url, title, description, liveTV, isMovie, false,
+      launchPlayer(
+          [], 0, url, title, description, liveTV, isMovie, false, poster,
           isTrailer: true);
       return;
     }
@@ -87,12 +135,12 @@ class Player {
     var subTitleList = await getSubtitlesList(id, isMovie);
     Navigator.pop(context);
 
-    if (result > 0) {
+    if (result > 0 && resume) {
       showResumeDialog(time, context, id, url, title, description, liveTV,
-          isMovie, subTitleList);
+          isMovie, subTitleList, poster);
     } else {
-      launchPlayer(
-          subTitleList, id, url, title, description, liveTV, isMovie, true);
+      launchPlayer(subTitleList, id, url, title, description, liveTV, isMovie,
+          true, poster);
     }
   }
 
@@ -177,13 +225,14 @@ class Player {
       String description,
       bool liveTV,
       bool isMovie,
-      List<Subtitle> subTitleList) {
+      List<Subtitle> subTitleList,
+      String poster) {
     showDialog(
       context: context,
       builder: (context) => WillPopScope(
         onWillPop: () => Future.value(true),
         child: ResumeDiaLog(time, subTitleList, id, url, title, description,
-            liveTV, isMovie, true),
+            liveTV, isMovie, true, poster),
       ),
     );
   }
@@ -197,6 +246,7 @@ class Player {
       bool liveTV,
       bool isMovie,
       bool resume,
+      String poster,
       {bool isTrailer = false}) async {
     print("here ==> ${convertToJson(subTitleList)}");
     var result = await platform.invokeMethod('launchVideoPlayer', {
@@ -207,6 +257,7 @@ class Player {
       'resume': resume,
       'isTrailer': isTrailer,
       'isLiveTv': liveTV,
+      'poster': poster,
       // 'subTitle': subTitleList.length > 0 ? subTitleList?.first?.url : ""
       'subTitle': convertToJson(subTitleList)
     });
@@ -225,9 +276,10 @@ class ResumeDiaLog extends StatefulWidget {
   var liveTV = false;
   var isMovie = false;
   var bool = false;
+  String poster;
 
   ResumeDiaLog(this.time, this.subTitleList, this.id, this.url, this.title,
-      this.description, this.liveTV, this.isMovie, this.bool);
+      this.description, this.liveTV, this.isMovie, this.bool, this.poster);
 
   @override
   State<ResumeDiaLog> createState() => _ResumeDiaLogState();
@@ -265,7 +317,8 @@ class _ResumeDiaLogState extends State<ResumeDiaLog> {
                   widget.description,
                   widget.liveTV,
                   widget.isMovie,
-                  pos_y == 0);
+                  pos_y == 0,
+                  widget.poster);
               break;
 
             case KEY_LEFT:
@@ -309,7 +362,7 @@ class _ResumeDiaLogState extends State<ResumeDiaLog> {
                   height: 10,
                 ),
                 //Text("Reanudar Donde Se Quedo?",
-                     Text("Desea reanudar la transmision a ${widget.time} mins?",
+                Text("Desea reanudar la transmision a ${widget.time} mins?",
                     style: TextStyle(color: Colors.white, fontSize: 20)),
                 SizedBox(
                   height: 30,

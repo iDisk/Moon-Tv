@@ -1787,7 +1787,8 @@ class _SerieState extends State<Serie> with WidgetsBindingObserver {
                   response: seasonResponse,
                   seasons: this.seasons,
                   mainId: widget.serie.id,
-                  episodeId: episode.id);
+                  episodeId: episode.id
+              );
             }
           });
         });
@@ -2360,4 +2361,5 @@ class _SerieState extends State<Serie> with WidgetsBindingObserver {
                   }
                 })));
   }
+
 }
