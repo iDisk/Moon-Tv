@@ -52,13 +52,17 @@ class _LoginState extends State<Login> {
     });
     var response;
     var body =  {'username':email, 'password': password};
-
-    response = await apiRest.loginUser( body);
+    print("aqui0");
+    response = await apiRest.loginUser(body);
+    print(response);
     print(response.body);
+    print("aqui1");
     if (response != null) {
       if (response.statusCode == 200) {
         var jsonData = convert.jsonDecode(response.body);
         if(jsonData["code"] == 200){
+
+          print("aqui4");
           int id_user=0;
           String days_user="0";
           String name_user="x";
@@ -519,7 +523,7 @@ class _LoginState extends State<Login> {
         passwordvalide = false;
 
       }
-      print("ok");
+      //print("ok");
       setState(() {
 
       });

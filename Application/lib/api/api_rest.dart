@@ -27,7 +27,11 @@ class apiRest{
   static  configPost(String url,var data) async{
     var response;
     Uri uri;
+
     try{
+
+      print("api_url:");
+      print(apiConfig.api_url.replaceAll("https://", "").replaceAll("/api/", ""));
       if(apiConfig.api_url.contains("https"))
         uri = Uri.https(apiConfig.api_url.replaceAll("https://", "").replaceAll("/api/", ""),"/api"+  url +apiConfig.api_token+"/"+apiConfig.item_purchase_code +"/");
       else
@@ -36,6 +40,7 @@ class apiRest{
     }catch(ex){
       response = null;
     }
+
     print(uri);
     return  response;
   }

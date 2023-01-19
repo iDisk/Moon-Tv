@@ -17,7 +17,7 @@ object RetrofitClient {
 
 
         var retrofit: Retrofit = Retrofit.Builder()
-            .baseUrl("https://moon-tv.terranone.com")
+            .baseUrl("https://admin.dashmoonmx.com")
             .addConverterFactory(GsonConverterFactory.create())
             .client(mOkHttpClient)
             .build()

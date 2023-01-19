@@ -43,6 +43,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "848853137262-onmljpvpjnueara9ebs8m4bsge11vh8b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.moontv.application",
+            "certificate_hash": "a604f74923fe07c164a3c6e9d18cb4e16e8c539f"
+          }
+        },
+        {
           "client_id": "848853137262-tqkt14us7sn1tuv1cv53t7ft92vqnth9.apps.googleusercontent.com",
           "client_type": 3
         }
